@@ -359,19 +359,34 @@ def calcular_costo(duracion):
         periodos_adicionales = np.ceil((duracion - 60) / 30)  # Cada 30 min adicionales
         return 29.0 + (periodos_adicionales * 40.0)
 
-# 🔹 Aplicar la función a los datos
+# 🔹 Verificar si la columna "Duración (min)" existe
+if "Duración (min)" not in global_df.columns:
+    st.error("⚠️ ERROR: La columna 'Duración (min)' no existe. Se procederá a calcularla nuevamente.")
+    
+    # Convertir a datetime
+    global_df["Inicio del viaje"] = pd.to_datetime(global_df["Inicio del viaje"], errors="coerce")
+    global_df["Fin del viaje"] = pd.to_datetime(global_df["Fin del viaje"], errors="coerce")
+    
+    # Calcular la duración en minutos
+    global_df["Duración (min)"] = (global_df["Fin del viaje"] - global_df["Inicio del viaje"]).dt.total_seconds() / 60
+    
+    # Eliminar valores negativos o nulos
+    global_df = global_df[global_df["Duración (min)"] > 0]
+    st.success("✅ 'Duración (min)' calculada y corregida.")
+
+# 🔹 Aplicar la función de costos
 df_costos = global_df.copy()
 df_costos["Costo (MXN)"] = df_costos["Duración (min)"].apply(calcular_costo)
 
 # 🔹 Mostrar los primeros 10 registros
-st.write("Ejemplo de costos calculados (Primeros 10 registros):")
+st.write("📊 **Ejemplo de costos calculados (Primeros 10 registros):**")
 st.dataframe(df_costos[["Viaje Id", "Duración (min)", "Costo (MXN)"]].head(10))
 
 # 🔹 Calcular el gasto total
 total_gasto = df_costos["Costo (MXN)"].sum()
-st.write(f"**Gasto Total Aproximado:** ${total_gasto:,.2f} MXN")
+st.write(f"💰 **Gasto Total Aproximado:** ${total_gasto:,.2f} MXN")
 
-# 🔹 Agrupar por rangos de tiempo para visualización
+# 🔹 Agrupar por rangos de duración del viaje
 bins = [0, 30, 60, 90, 120, 150, 180, 210, 240, 300, np.inf]
 labels = ["0-30 min", "31-60 min", "61-90 min", "91-120 min", "121-150 min",
           "151-180 min", "181-210 min", "211-240 min", "241-300 min", "300+ min"]
@@ -380,12 +395,12 @@ df_costos["Rango de Tiempo"] = pd.cut(df_costos["Duración (min)"], bins=bins, l
 # 🔹 Calcular total de costos por rango
 costos_por_rango = df_costos.groupby("Rango de Tiempo")["Costo (MXN)"].sum().reset_index()
 
-# 🔹 Gráfico de barras del total gastado por rango de duración
+# 🔹 Gráfico de barras del total gastado por duración del viaje
 fig, ax = plt.subplots(figsize=(12, 6))
 sns.barplot(data=costos_por_rango, x="Rango de Tiempo", y="Costo (MXN)", palette="coolwarm", ax=ax)
 ax.set_xlabel("Duración del Viaje", fontsize=12)
 ax.set_ylabel("Costo Total (MXN)", fontsize=12)
-ax.set_title("Gasto Total por Duración del Viaje", fontsize=14)
+ax.set_title("💸 Gasto Total por Duración del Viaje", fontsize=14)
 plt.xticks(rotation=45)
 plt.tight_layout()
 st.pyplot(fig)
