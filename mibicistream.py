@@ -517,3 +517,34 @@ elif tipo_grafico == "Comparación Inicio vs Fin":
     plt.xticks(rotation=45)
     st.pyplot(fig)
 
+st.subheader("📊 **Correlación entre Edad y Tiempo de Viaje**")
+
+# 🔹 **Verificar si las columnas necesarias existen**
+if "Año de nacimiento" in global_df.columns and "Duración (min)" in global_df.columns:
+    
+    # 🔹 **Eliminar valores nulos y calcular la edad**
+    df_edad_tiempo = global_df[["Año de nacimiento", "Duración (min)"]].dropna().copy()
+    df_edad_tiempo["Edad"] = pd.to_datetime("today").year - df_edad_tiempo["Año de nacimiento"]
+
+    # 🔹 **Eliminar edades fuera de un rango razonable (10 a 100 años)**
+    df_edad_tiempo = df_edad_tiempo[(df_edad_tiempo["Edad"] >= 10) & (df_edad_tiempo["Edad"] <= 100)]
+    
+    # 🔹 **Cálculo de la correlación**
+    correlacion = df_edad_tiempo["Edad"].corr(df_edad_tiempo["Duración (min)"])
+
+    st.write(f"🔢 **Coeficiente de Correlación Pearson:** {correlacion:.3f}")
+
+    # 🔹 **Gráfico de Dispersión**
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.scatterplot(data=df_edad_tiempo, x="Edad", y="Duración (min)", alpha=0.3, color="blue", ax=ax)
+    sns.regplot(data=df_edad_tiempo, x="Edad", y="Duración (min)", scatter=False, color="red", ax=ax)
+    
+    ax.set_xlabel("Edad del Usuario", fontsize=12)
+    ax.set_ylabel("Duración del Viaje (min)", fontsize=12)
+    ax.set_title("📉 Relación entre Edad y Tiempo de Viaje", fontsize=14)
+    plt.tight_layout()
+    st.pyplot(fig)
+
+else:
+    st.error("⚠️ No se encontraron las columnas necesarias ('Año de nacimiento' y 'Duración (min)').")
+
