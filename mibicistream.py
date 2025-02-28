@@ -7,6 +7,7 @@ from geopy.distance import geodesic
 
 st.image("./IMG/Foto de estacion mi bici.jpg", use_container_width=True)
 
+
 st.title("Análisis Mibici")
 st.header("Introducción")
 st.subheader("Análisis de datos de Mibici")
@@ -24,10 +25,15 @@ st.sidebar.image("./IMG/Mibici_logo.jpg", use_container_width=True)
 datos2014 = pd.read_csv("./datos/2014/Mibici_2014_limpios.csv", encoding='latin-1')
 
 
+nomenclatura = pd.read_csv("./datos/Nomenclatura de las estaciones/nomenclatura_2025_01.csv", encoding='latin-1')
+
+
 # Crear un diccionario con los DataFrames por año
 dfs_por_año = {
     "2014": datos2014,
 }
+
+
 
 # Asegurarse de que cada DataFrame tenga las columnas "Año" y "Mes"
 # y renombrar las columnas según lo requerido
@@ -148,3 +154,56 @@ ax3.set_title("Top 10 Promedios de Tiempo de Viaje por Estación", fontsize=14)
 ax3.tick_params(axis='x', rotation=45)
 plt.tight_layout()
 st.pyplot(fig3)
+
+#-----Aproximacion de distancia recorrida (distancia entre estaciones, y en caso de iniciar y finalizar en la misma estacion aproximar por tiempo de viaje)
+
+import pandas as pd
+from geopy.distance import geodesic
+
+# 1. Carga de tus datos de viajes (asegúrate de que tengan "Origen Id", "Destino Id" y el tiempo de viaje en minutos)
+viajes = pd.read_csv("tus_viajes.csv", encoding="latin-1")
+
+# 2. Carga de la nomenclatura
+nomenclatura = pd.read_csv("./datos/Nomenclatura de las estaciones/nomenclatura_2025_01.csv", encoding='latin-1')
+# Las columnas que esperas en nomenclatura son: id, name, obcn, location, latitude, longitude, status
+
+# 3. Unir las coordenadas de la estación de origen
+viajes = viajes.merge(
+    nomenclatura[['id', 'latitude', 'longitude']], 
+    left_on='Origen Id',  # Ajusta si tu columna se llama distinto
+    right_on='id',
+    how='left'
+)
+viajes = viajes.rename(columns={
+    'latitude': 'lat_origin',
+    'longitude': 'lon_origin'
+}).drop(columns=['id'])
+
+# 4. Unir las coordenadas de la estación de destino
+viajes = viajes.merge(
+    nomenclatura[['id', 'latitude', 'longitude']], 
+    left_on='Destino Id',  # Ajusta si tu columna se llama distinto
+    right_on='id',
+    how='left'
+)
+viajes = viajes.rename(columns={
+    'latitude': 'lat_destination',
+    'longitude': 'lon_destination'
+}).drop(columns=['id'])
+
+# 5. Función para calcular la distancia
+def calcular_distancia(row):
+    origen = (row['lat_origin'], row['lon_origin'])
+    destino = (row['lat_destination'], row['lon_destination'])
+    if origen == destino:
+        # Si es un viaje circular, estimamos distancia basada en tiempo de viaje y velocidad promedio (15 km/h)
+        # Ajusta 'tiempo_viaje' al nombre de tu columna con tiempo en minutos
+        return (row['tiempo_viaje'] / 60) * 15  # Distancia en km
+    else:
+        return geodesic(origen, destino).km
+
+# 6. Calcular la distancia en km para cada viaje
+viajes['distance_km'] = viajes.apply(calcular_distancia, axis=1)
+
+# 7. Visualizar o exportar resultados
+print(viajes[['Origen Id', 'Destino Id', 'distance_km']].head(10))
