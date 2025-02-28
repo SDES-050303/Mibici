@@ -31,6 +31,7 @@ nomenclatura = pd.read_csv("./datos/Nomenclatura de las estaciones/nomenclatura_
 # Crear un diccionario con los DataFrames por año
 dfs_por_año = {
     "2014": datos2014,
+    "2015": datos2015
 }
 
 
