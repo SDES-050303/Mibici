@@ -296,3 +296,44 @@ ax2.tick_params(axis='x', rotation=45)
 plt.tight_layout()
 st.pyplot(fig2)
 
+# -------------------------------------
+# 🔹 Análisis del uso de Mibici por días de la semana
+# -------------------------------------
+
+st.subheader("Uso de Mibici por Día de la Semana")
+
+# 🔹 Asegurar que las fechas estén en formato datetime
+df_dias = global_df.copy()
+df_dias["Inicio del viaje"] = pd.to_datetime(df_dias["Inicio del viaje"], errors="coerce")
+
+# 🔹 Obtener el día de la semana (0=Lunes, 6=Domingo)
+df_dias["Día de la Semana"] = df_dias["Inicio del viaje"].dt.dayofweek
+
+# 🔹 Mapeo de números a nombres de días
+dias_semana = {0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves", 4: "Viernes", 5: "Sábado", 6: "Domingo"}
+df_dias["Día de la Semana"] = df_dias["Día de la Semana"].map(dias_semana)
+
+# 🔹 Contar los viajes por día de la semana
+viajes_por_dia = df_dias["Día de la Semana"].value_counts().reindex(dias_semana.values()).reset_index()
+viajes_por_dia.columns = ["Día de la Semana", "Número de Viajes"]
+
+# 🔹 Gráfico 1: Barras del número total de viajes por día de la semana
+fig1, ax1 = plt.subplots(figsize=(10, 5))
+sns.barplot(data=viajes_por_dia, x="Día de la Semana", y="Número de Viajes", palette="pastel", ax=ax1)
+ax1.set_xlabel("Día de la Semana", fontsize=12)
+ax1.set_ylabel("Número de Viajes", fontsize=12)
+ax1.set_title("Número Total de Viajes por Día de la Semana", fontsize=14)
+plt.xticks(rotation=45)
+plt.tight_layout()
+st.pyplot(fig1)
+
+# 🔹 Gráfico 2: Línea de la evolución del uso por día de la semana
+fig2, ax2 = plt.subplots(figsize=(10, 5))
+sns.lineplot(data=viajes_por_dia, x="Día de la Semana", y="Número de Viajes", marker="o", color="b", ax=ax2)
+ax2.set_xlabel("Día de la Semana", fontsize=12)
+ax2.set_ylabel("Número de Viajes", fontsize=12)
+ax2.set_title("Tendencia de Uso por Día de la Semana", fontsize=14)
+plt.xticks(rotation=45)
+plt.tight_layout()
+st.pyplot(fig2)
+
