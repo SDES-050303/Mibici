@@ -5,7 +5,7 @@ import seaborn as sns
 import numpy as np
 from geopy.distance import geodesic
 
-st.image("./IMG/Foto de estacion mi bici.jpg", use_column_width=True)
+st.sidebar.image("./IMG/Foto de estacion mi bici.jpg", use_container_width=True)
 
 
 st.title("Análisis Mibici")
@@ -14,6 +14,7 @@ st.subheader("Análisis de datos de Mibici")
 st.markdown("""En este repertorio podemos notar una analizis de datos de como las bicicletas **Mibici** Fueron utilizadas atravez de los 10 años,
  que han estado activas vamos a descubrir datos que nunca esperariamos conocer si no fuera por el analisis profundo que se registro y se compartio en
 **https://www.mibici.net/es/datos-abiertos/** Por favor de utilizar los datos de manera correcta""")
+
 # ------------------- Configuración del Sidebar -------------------
 st.sidebar.title("Panel de Control")
 st.sidebar.markdown("### Opciones de Filtrado")
@@ -124,7 +125,7 @@ global_df["Fin del viaje"] = pd.to_datetime(global_df["Fin del viaje"], errors="
 # Calcular la duración en minutos
 global_df["Duración (min)"] = (global_df["Fin del viaje"] - global_df["Inicio del viaje"]).dt.total_seconds() / 60
 
-# ------------------- Promedio de Tiempo de Viaje por Estación -------------------
+# --------------------------------------------Promedio de Tiempo de Viaje por Estación -------------------
 # Agrupar por "Origen Id" y calcular el promedio de duración
 promedio_por_estacion = global_df.groupby("Origen Id")["Duración (min)"].mean().reset_index()
 promedio_por_estacion.columns = ["Estación", "Promedio de duración (min)"]
@@ -138,7 +139,8 @@ top10_promedios = promedio_por_estacion.head(10)
 st.subheader("Top 10 Promedios de Tiempo de Viaje por Estación")
 st.dataframe(top10_promedios.reset_index(drop=True))
 
-# ------------------- Gráfica de los Top 10 Promedios de Tiempo de Viaje -------------------
+# ------------------- Gráfica de los Top 10 Promedios de Tiempo de Viaje
+st.subheader("Top 10 Promedios de Tiempo de Viaje por Estación : grafica")
 fig3, ax3 = plt.subplots(figsize=(12, 6))
 sns.barplot(data=top10_promedios, x="Estación", y="Promedio de duración (min)", palette="rocket", ax=ax3)
 ax3.set_xlabel("Estación", fontsize=12)
