@@ -17,7 +17,7 @@ st.sidebar.image("./IMG/Mibici_logo.jpg", use_column_width=True)
 
 # ------------------- Cargar archivos limpios por año -------------------
 # Todas las lecturas se hacen con encoding='latin-1'
-datos2014 = pd.read_csv("/datos/2014/Mibici_2014_limpios.csv", encoding='latin-1')
+datos2014 = pd.read_csv("./datos/2014/Mibici_2014_limpios.csv", encoding='latin-1')
 
 
 # Crear un diccionario con los DataFrames por año
