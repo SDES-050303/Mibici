@@ -31,7 +31,7 @@ Sube un archivo ZIP con los datos y explora la información de manera visual e i
 # -----------------------------------------
 # 🔹 Sidebar: Configuración y Carga de Datos
 # -----------------------------------------
-st.sidebar.title("./IMG/Mibici_logo.jpg")
+st.sidebar.image("./IMG/Mibici_logo.jpg")
 st.sidebar.title("⚙️ Configuración")
 uploaded_file = st.sidebar.file_uploader("📁 Sube el ZIP con los datos", type="zip")
 
