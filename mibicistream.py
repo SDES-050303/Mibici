@@ -405,3 +405,115 @@ plt.xticks(rotation=45)
 plt.tight_layout()
 st.pyplot(fig)
 
+# -------------------------------------
+# 📊 Gráfico de Uso de Estaciones 
+# -------------------------------------
+
+st.subheader("📊 Uso de Estaciones (Día - Mes - Año - Inicio - Fin)")
+
+# 🔹 Verificar si la columna "Inicio del viaje" existe y convertirla a datetime
+if "Inicio del viaje" not in global_df.columns:
+    st.error("⚠️ ERROR: La columna 'Inicio del viaje' no existe. Se procederá a calcularla nuevamente.")
+    global_df["Inicio del viaje"] = pd.to_datetime(global_df["Inicio del viaje"], errors="coerce")
+
+# 🔹 Crear columnas adicionales para análisis
+global_df["Día de la Semana"] = global_df["Inicio del viaje"].dt.day_name()
+global_df["Mes"] = global_df["Inicio del viaje"].dt.month
+global_df["Año"] = global_df["Inicio del viaje"].dt.year
+global_df["Hora"] = global_df["Inicio del viaje"].dt.hour
+
+# 🔹 Sidebar para elegir tipo de gráfico
+st.sidebar.markdown("---")
+tipo_grafico = st.sidebar.selectbox(
+    "Selecciona el Tipo de Análisis 📊", 
+    ["Uso por Día de la Semana", "Uso por Mes", "Uso por Año", "Uso por Hora", "Comparación Inicio vs Fin"]
+)
+
+# 🔹 1️⃣ Gráfico de Uso por Día de la Semana
+if tipo_grafico == "Uso por Día de la Semana":
+    st.subheader("📅 Viajes por Día de la Semana")
+
+    viajes_por_dia = global_df["Día de la Semana"].value_counts().reindex(
+        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    ).reset_index()
+    viajes_por_dia.columns = ["Día", "Total de Viajes"]
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.barplot(x="Día", y="Total de Viajes", data=viajes_por_dia, palette="muted", ax=ax)
+    ax.set_xlabel("Día de la Semana")
+    ax.set_ylabel("Número de Viajes")
+    ax.set_title("Uso de Mibici por Día de la Semana")
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
+
+# 🔹 2️⃣ Gráfico de Uso por Mes
+elif tipo_grafico == "Uso por Mes":
+    st.subheader("📅 Viajes por Mes")
+
+    viajes_por_mes = global_df["Mes"].value_counts().sort_index().reset_index()
+    viajes_por_mes.columns = ["Mes", "Total de Viajes"]
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.barplot(x="Mes", y="Total de Viajes", data=viajes_por_mes, palette="coolwarm", ax=ax)
+    ax.set_xlabel("Mes")
+    ax.set_ylabel("Número de Viajes")
+    ax.set_title("Uso de Mibici por Mes")
+    plt.xticks(range(12), ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"])
+    st.pyplot(fig)
+
+# 🔹 3️⃣ Gráfico de Uso por Año
+elif tipo_grafico == "Uso por Año":
+    st.subheader("📆 Viajes por Año")
+
+    viajes_por_año = global_df["Año"].value_counts().sort_index().reset_index()
+    viajes_por_año.columns = ["Año", "Total de Viajes"]
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.lineplot(x="Año", y="Total de Viajes", data=viajes_por_año, marker="o", color="b", ax=ax)
+    ax.set_xlabel("Año")
+    ax.set_ylabel("Número de Viajes")
+    ax.set_title("Evolución del Uso de Mibici por Año")
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
+
+# 🔹 4️⃣ Gráfico de Uso por Hora
+elif tipo_grafico == "Uso por Hora":
+    st.subheader("🕒 Uso por Hora del Día")
+
+    viajes_por_hora = global_df["Hora"].value_counts().sort_index().reset_index()
+    viajes_por_hora.columns = ["Hora", "Total de Viajes"]
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.lineplot(x="Hora", y="Total de Viajes", data=viajes_por_hora, marker="o", color="g", ax=ax)
+    ax.set_xlabel("Hora del Día")
+    ax.set_ylabel("Número de Viajes")
+    ax.set_title("Uso de Mibici por Hora del Día")
+    plt.xticks(range(0, 24))
+    st.pyplot(fig)
+
+# 🔹 5️⃣ Comparación de Estaciones de Inicio vs Fin
+elif tipo_grafico == "Comparación Inicio vs Fin":
+    st.subheader("🚴 Comparación de Uso: Estaciones de Inicio vs Fin")
+
+    viajes_inicio = global_df["Origen Id"].value_counts().reset_index()
+    viajes_inicio.columns = ["Estación", "Viajes Inicio"]
+
+    viajes_fin = global_df["Destino Id"].value_counts().reset_index()
+    viajes_fin.columns = ["Estación", "Viajes Fin"]
+
+    uso_estaciones = viajes_inicio.merge(viajes_fin, on="Estación", how="outer").fillna(0)
+
+    # Seleccionar las 10 estaciones más usadas
+    top_estaciones = uso_estaciones.sort_values(by=["Viajes Inicio", "Viajes Fin"], ascending=False).head(10)
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.barplot(x="Estación", y="Viajes Inicio", data=top_estaciones, color="blue", label="Inicio", ax=ax)
+    sns.barplot(x="Estación", y="Viajes Fin", data=top_estaciones, color="red", alpha=0.6, label="Fin", ax=ax)
+
+    ax.set_xlabel("Estación")
+    ax.set_ylabel("Número de Viajes")
+    ax.set_title("Comparación de Uso: Inicio vs Fin de Viajes")
+    ax.legend()
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
+
