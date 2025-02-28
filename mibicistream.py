@@ -8,8 +8,9 @@ from geopy.distance import geodesic
 st.title("Análisis Mibici")
 st.header("Introducción")
 st.subheader("Análisis de datos de Mibici")
-st.markdown("Este dashboard utiliza **Streamlit** para mostrar información procesada de los datos de Mibici. Puedes ver gráficas, tablas y más información interactiva.")
-
+st.markdown("""En este repertorio podemos notar una analizis de datos de como las bicicletas **Mibici** Fueron utilizadas atravez de los 10 años,
+ que han estado activas vamos a descubrir datos que nunca esperariamos conocer si no fuera por el analisis profundo que se registro y se compartio en
+**https://www.mibici.net/es/datos-abiertos/** Por favor de utilizar los datos de manera correcta""")
 # ------------------- Configuración del Sidebar -------------------
 st.sidebar.title("Panel de Control")
 st.sidebar.markdown("### Opciones de Filtrado")
