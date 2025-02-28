@@ -17,7 +17,7 @@ st.markdown("""En este repertorio podemos notar una analizis de datos de como la
 # ------------------- Configuración del Sidebar -------------------
 st.sidebar.title("Panel de Control")
 st.sidebar.markdown("### Opciones de Filtrado")
-st.sidebar.image("./IMG/Mibici_logo.jpg", use_column_width=True)
+st.sidebar.image("./IMG/Mibici_logo.jpg", use_container_width=True)
 
 # ------------------- Cargar archivos limpios por año -------------------
 # Todas las lecturas se hacen con encoding='latin-1'
