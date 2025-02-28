@@ -155,55 +155,60 @@ ax3.tick_params(axis='x', rotation=45)
 plt.tight_layout()
 st.pyplot(fig3)
 
-#-----Aproximacion de distancia recorrida (distancia entre estaciones, y en caso de iniciar y finalizar en la misma estacion aproximar por tiempo de viaje)
+# -------------------------------------
+# Aproximación de distancia recorrida
+# -------------------------------------
+st.subheader("Aproximación de Distancia Recorrida")
 
-import pandas as pd
-from geopy.distance import geodesic
+# 1. Ajusta el DataFrame para que tenga el tiempo de viaje en minutos y columnas "Origen Id", "Destino Id".
+#    Supongamos que en global_df ya tienes "Duración (min)" calculada.
+#    Si no, asegúrate de crearla antes.
 
-# 1. Carga de tus datos de viajes (asegúrate de que tengan "Origen Id", "Destino Id" y el tiempo de viaje en minutos)
-viajes = pd.read_csv("tus_viajes.csv", encoding="latin-1")
+# 2. Unir coordenadas de origen y destino con nomenclatura
+df_distancia = global_df.copy()
 
-# 2. Carga de la nomenclatura
-nomenclatura = pd.read_csv("./datos/Nomenclatura de las estaciones/nomenclatura_2025_01.csv", encoding='latin-1')
-# Las columnas que esperas en nomenclatura son: id, name, obcn, location, latitude, longitude, status
-
-# 3. Unir las coordenadas de la estación de origen
-viajes = viajes.merge(
-    nomenclatura[['id', 'latitude', 'longitude']], 
-    left_on='Origen Id',  # Ajusta si tu columna se llama distinto
+# Asegúrate de tener la columna "Origen Id" y "Destino Id" con nombres idénticos a 'id' en nomenclatura.
+# Merge con coordenadas de origen
+df_distancia = df_distancia.merge(
+    nomenclatura[['id', 'latitude', 'longitude']],
+    left_on='Origen Id',
     right_on='id',
     how='left'
 )
-viajes = viajes.rename(columns={
+df_distancia.rename(columns={
     'latitude': 'lat_origin',
     'longitude': 'lon_origin'
-}).drop(columns=['id'])
+}, inplace=True)
+df_distancia.drop(columns=['id'], inplace=True)
 
-# 4. Unir las coordenadas de la estación de destino
-viajes = viajes.merge(
-    nomenclatura[['id', 'latitude', 'longitude']], 
-    left_on='Destino Id',  # Ajusta si tu columna se llama distinto
+# Merge con coordenadas de destino
+df_distancia = df_distancia.merge(
+    nomenclatura[['id', 'latitude', 'longitude']],
+    left_on='Destino Id',
     right_on='id',
     how='left'
 )
-viajes = viajes.rename(columns={
+df_distancia.rename(columns={
     'latitude': 'lat_destination',
     'longitude': 'lon_destination'
-}).drop(columns=['id'])
+}, inplace=True)
+df_distancia.drop(columns=['id'], inplace=True)
 
-# 5. Función para calcular la distancia
+# Función para calcular la distancia
 def calcular_distancia(row):
     origen = (row['lat_origin'], row['lon_origin'])
     destino = (row['lat_destination'], row['lon_destination'])
+    if pd.isna(origen[0]) or pd.isna(destino[0]):
+        # Si no tenemos coordenadas, devolvemos NaN
+        return np.nan
     if origen == destino:
-        # Si es un viaje circular, estimamos distancia basada en tiempo de viaje y velocidad promedio (15 km/h)
-        # Ajusta 'tiempo_viaje' al nombre de tu columna con tiempo en minutos
-        return (row['tiempo_viaje'] / 60) * 15  # Distancia en km
+        # Asumimos velocidad promedio 15 km/h
+        return (row['Duración (min)'] / 60) * 15
     else:
         return geodesic(origen, destino).km
 
-# 6. Calcular la distancia en km para cada viaje
-viajes['distance_km'] = viajes.apply(calcular_distancia, axis=1)
+df_distancia['distance_km'] = df_distancia.apply(calcular_distancia, axis=1)
 
-# 7. Visualizar o exportar resultados
-print(viajes[['Origen Id', 'Destino Id', 'distance_km']].head(10))
+# Mostrar los primeros 10 viajes con su distancia
+st.write("Ejemplo de Distancia Calculada (Primeros 10 registros):")
+st.dataframe(df_distancia[["Origen Id", "Destino Id", "Duración (min)", "distance_km"]].head(10))
