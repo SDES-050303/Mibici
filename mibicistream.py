@@ -188,5 +188,65 @@ plt.xticks(rotation=45)
 plt.tight_layout()
 st.pyplot(fig)
 
+#------------------------------------------------------------Aproximación de Distancia Recorrida------------------------
 
+st.subheader("Aproximación de Distancia Recorrida")
+
+# Asegurar que global_df tenga las columnas necesarias
+df_distancia = global_df.copy()
+
+# Cargar las coordenadas de la nomenclatura
+nomenclatura = pd.read_csv("./datos/Nomenclatura de las estaciones/nomenclatura_2025_01.csv", encoding='latin-1')
+
+# Merge con coordenadas de origen
+df_distancia = df_distancia.merge(
+    nomenclatura[['id', 'latitude', 'longitude']],
+    left_on='Origen Id',
+    right_on='id',
+    how='left'
+)
+df_distancia.rename(columns={'latitude': 'lat_origin', 'longitude': 'lon_origin'}, inplace=True)
+df_distancia.drop(columns=['id'], inplace=True)
+
+# Merge con coordenadas de destino
+df_distancia = df_distancia.merge(
+    nomenclatura[['id', 'latitude', 'longitude']],
+    left_on='Destino Id',
+    right_on='id',
+    how='left'
+)
+df_distancia.rename(columns={'latitude': 'lat_destination', 'longitude': 'lon_destination'}, inplace=True)
+df_distancia.drop(columns=['id'], inplace=True)
+
+# Función para calcular la distancia recorrida
+def calcular_distancia(row):
+    origen = (row['lat_origin'], row['lon_origin'])
+    destino = (row['lat_destination'], row['lon_destination'])
+    
+    if pd.isna(origen[0]) or pd.isna(destino[0]):
+        return np.nan  # Si no hay coordenadas, devolver NaN
+    
+    if origen == destino:
+        # Si el viaje es circular (misma estación), estimar distancia basada en velocidad promedio (15 km/h)
+        return (row['Duración (min)'] / 60) * 15  # Distancia en km
+    else:
+        return geodesic(origen, destino).km  # Distancia geodésica en km
+
+# Aplicar el cálculo de distancia
+df_distancia['Distancia (km)'] = df_distancia.apply(calcular_distancia, axis=1)
+
+# Mostrar los primeros 10 viajes con su distancia
+st.write("Ejemplo de Distancia Calculada (Primeros 10 registros):")
+st.dataframe(df_distancia[["Origen Id", "Destino Id", "Duración (min)", "Distancia (km)"]].head(10))
+
+# ------------------- Gráfica de Distribución de Distancia Recorrida -------------------
+st.subheader("Distribución de Distancias Recorridas")
+
+fig, ax = plt.subplots(figsize=(12, 6))
+sns.histplot(df_distancia["Distancia (km)"].dropna(), bins=30, kde=True, color="blue", ax=ax)
+ax.set_xlabel("Distancia (km)", fontsize=12)
+ax.set_ylabel("Frecuencia", fontsize=12)
+ax.set_title("Distribución de Distancias Recorridas en los Viajes de Mibici", fontsize=14)
+plt.tight_layout()
+st.pyplot(fig)
 
