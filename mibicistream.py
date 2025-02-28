@@ -192,70 +192,71 @@ st.pyplot(fig)
 
 st.subheader("Aproximación de Distancia Recorrida")
 
-# Asegurar que global_df tenga las columnas necesarias
+# 🔹 **Copiar el DataFrame original para cálculos**
 df_distancia = global_df.copy()
 
-# Verificar si "Duración (min)" existe, si no, calcularla
+# 🔹 **Verificar si "Duración (min)" existe y calcularla si falta**
 if "Duración (min)" not in df_distancia.columns:
     df_distancia["Inicio del viaje"] = pd.to_datetime(df_distancia["Inicio del viaje"], errors="coerce")
     df_distancia["Fin del viaje"] = pd.to_datetime(df_distancia["Fin del viaje"], errors="coerce")
     df_distancia["Duración (min)"] = (df_distancia["Fin del viaje"] - df_distancia["Inicio del viaje"]).dt.total_seconds() / 60
 
-# Revisar si las columnas esperadas están en el DataFrame
+# 🔹 **Mostrar columnas disponibles para depuración**
 st.write("Columnas disponibles en df_distancia:", df_distancia.columns.tolist())
 
-# Cargar las coordenadas de la nomenclatura
+# 🔹 **Cargar las coordenadas de la nomenclatura**
 nomenclatura = pd.read_csv("./datos/Nomenclatura de las estaciones/nomenclatura_2025_01.csv", encoding='latin-1')
 
-# Merge con coordenadas de origen
-df_distancia = df_distancia.merge(
-    nomenclatura[['id', 'latitude', 'longitude']],
-    left_on='Origen Id',
-    right_on='id',
-    how='left'
-)
-df_distancia.rename(columns={'latitude': 'lat_origin', 'longitude': 'lon_origin'}, inplace=True)
-df_distancia.drop(columns=['id'], inplace=True)
+# 🔹 **Renombrar columnas de nomenclatura para hacer merge más fácil**
+nomenclatura.rename(columns={
+    "id": "Origen Id",
+    "latitude": "lat_origin",
+    "longitude": "lon_origin"
+}, inplace=True)
 
-# Merge con coordenadas de destino
-df_distancia = df_distancia.merge(
-    nomenclatura[['id', 'latitude', 'longitude']],
-    left_on='Destino Id',
-    right_on='id',
-    how='left'
-)
-df_distancia.rename(columns={'latitude': 'lat_destination', 'longitude': 'lon_destination'}, inplace=True)
-df_distancia.drop(columns=['id'], inplace=True)
+# 🔹 **Unir coordenadas de origen**
+df_distancia = df_distancia.merge(nomenclatura[['Origen Id', 'lat_origin', 'lon_origin']], on="Origen Id", how="left")
 
-# Verificar si las coordenadas están correctamente unidas
-st.write("Ejemplo de datos con coordenadas:", df_distancia[["Origen Id", "Destino Id", "lat_origin", "lon_origin", "lat_destination", "lon_destination"]].head())
+# 🔹 **Renombrar "id" en nomenclatura a "Destino Id" para hacer el merge**
+nomenclatura.rename(columns={
+    "Origen Id": "Destino Id",
+    "lat_origin": "lat_destination",
+    "lon_origin": "lon_destination"
+}, inplace=True)
 
-# Función para calcular la distancia recorrida
+# 🔹 **Unir coordenadas de destino**
+df_distancia = df_distancia.merge(nomenclatura[['Destino Id', 'lat_destination', 'lon_destination']], on="Destino Id", how="left")
+
+# 🔹 **Mostrar datos después del merge**
+st.write("Ejemplo de datos con coordenadas después del merge:")
+st.dataframe(df_distancia[["Origen Id", "Destino Id", "Duración (min)", "lat_origin", "lon_origin", "lat_destination", "lon_destination"]].head())
+
+# 🔹 **Función para calcular la distancia**
 def calcular_distancia(row):
     try:
         origen = (row['lat_origin'], row['lon_origin'])
         destino = (row['lat_destination'], row['lon_destination'])
-        
+
         # Si alguna coordenada es NaN, devolver NaN
         if pd.isna(origen[0]) or pd.isna(destino[0]):
             return np.nan  
-        
+
         if origen == destino:
-            # Si el viaje es circular (misma estación), estimar distancia basada en velocidad promedio (15 km/h)
+            # Asumimos velocidad promedio 15 km/h
             return (row['Duración (min)'] / 60) * 15  # Distancia en km
         else:
             return geodesic(origen, destino).km  # Distancia geodésica en km
     except Exception as e:
         return np.nan  # Si hay algún error, devolver NaN
 
-# Aplicar el cálculo de distancia
+# 🔹 **Aplicar la función y calcular la distancia**
 df_distancia['Distancia (km)'] = df_distancia.apply(calcular_distancia, axis=1)
 
-# Mostrar los primeros 10 viajes con su distancia
-st.write("Ejemplo de Distancia Calculada (Primeros 10 registros):")
+# 🔹 **Mostrar los primeros 10 viajes con su distancia**
+st.subheader("Ejemplo de Distancia Calculada (Primeros 10 registros)")
 st.dataframe(df_distancia[["Origen Id", "Destino Id", "Duración (min)", "Distancia (km)"]].head(10))
 
-# ------------------- Gráfica de Distribución de Distancia Recorrida -------------------
+# 🔹 **Gráfica de Distribución de Distancias Recorridas**
 st.subheader("Distribución de Distancias Recorridas")
 
 fig, ax = plt.subplots(figsize=(12, 6))
@@ -265,4 +266,13 @@ ax.set_ylabel("Frecuencia", fontsize=12)
 ax.set_title("Distribución de Distancias Recorridas en los Viajes de Mibici", fontsize=14)
 plt.tight_layout()
 st.pyplot(fig)
+
+
+
+
+
+
+
+
+
 
