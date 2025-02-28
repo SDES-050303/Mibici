@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from geopy.distance import geodesic
+import zipfile
+from io import BytesIO
 
 st.image("./IMG/Foto de estacion mi bici.jpg", use_container_width=True)
 
@@ -19,48 +21,47 @@ st.markdown("""En este repertorio podemos notar una analizis de datos de como la
 st.sidebar.title("Panel de Control")
 st.sidebar.markdown("### Opciones de Filtrado")
 st.sidebar.image("./IMG/Mibici_logo.jpg", use_container_width=True)
+st.sidebar.title("Subir archivo ZIP")
+uploaded_file = st.sidebar.file_uploader("Sube el ZIP con los datos", type="zip")
 
 # ------------------- Cargar archivos limpios por año -------------------
 # Todas las lecturas se hacen con encoding='latin-1'
-datos2014 = pd.read_csv("./datos/2014/Mibici_2014_limpios.csv", encoding='latin-1')
-datos2015 = pd.read_csv("./datos/2015/Mibici_2015_limpios_2.csv", encoding='latin-1')
-
-
-
 nomenclatura = pd.read_csv("./datos/Nomenclatura de las estaciones/nomenclatura_2025_01.csv", encoding='latin-1')
 
 
-# Crear un diccionario con los DataFrames por año
-dfs_por_año = {
-    "2014": datos2014,
-    "2015": datos2015
-}
+if uploaded_file is not None:
+    with zipfile.ZipFile(uploaded_file, "r") as z:
+        archivos_csv = [f for f in z.namelist() if f.endswith(".csv")]  # Obtener todos los CSV
 
+        st.write(f"Archivos encontrados en el ZIP: {archivos_csv}")
 
+        # Leer cada archivo CSV en un diccionario
+        dfs_por_año = {}
+        for archivo in archivos_csv:
+            with z.open(archivo) as f:
+                df = pd.read_csv(f, encoding='latin-1')
+                df.rename(columns={  # Renombrar columnas
+                    'Usuario_Id': 'Usuario Id',
+                    'Año_de_nacimiento': 'Año de nacimiento',
+                    'Inicio_del_viaje': 'Inicio del viaje',
+                    'Fin_del_viaje': 'Fin del viaje',
+                    'Origen_Id': 'Origen Id',
+                    'Destino_Id': 'Destino Id',
+                    'Viaje_Id': 'Viaje Id',
+                    'AÃ±o_de_nacimiento': 'Año de nacimiento',
+                    'A}äe_nacimiento': 'Año de nacimiento',
+                    'Aï¿½o_de_nacimiento': 'Año de nacimiento'
+                }, inplace=True)
 
-# Asegurarse de que cada DataFrame tenga las columnas "Año" y "Mes"
-# y renombrar las columnas según lo requerido
-for year, df in dfs_por_año.items():
-    # Renombrar columnas para homogeneizar los nombres
-    df.rename(columns={
-        'Usuario_Id': 'Usuario Id',
-        'Año_de_nacimiento': 'Año de nacimiento',
-        'Inicio_del_viaje': 'Inicio del viaje',
-        'Fin_del_viaje': 'Fin del viaje',
-        'Origen_Id': 'Origen Id',
-        'Destino_Id': 'Destino Id',
-        'Viaje_Id': 'Viaje Id',
-        'AÃ±o_de_nacimiento': 'Año de nacimiento',
-        'A}äe_nacimiento': 'Año de nacimiento',
-        'Aï¿½o_de_nacimiento': 'Año de nacimiento'
-    }, inplace=True)
-    df["Inicio del viaje"] = pd.to_datetime(df["Inicio del viaje"], errors="coerce")
-    df["Año"] = df["Inicio del viaje"].dt.year
-    df["Mes"] = df["Inicio del viaje"].dt.month
-    dfs_por_año[year] = df
+                # Extraer el año desde el nombre del archivo
+                año = archivo.split("_")[1][:4]  # Ajusta esto según el nombre de tus archivos
+                dfs_por_año[año] = df  # Guardar en el diccionario
 
-# Crear la variable global uniendo todos los DataFrames
-global_df = pd.concat(list(dfs_por_año.values()), ignore_index=True)
+        # Unir todos los DataFrames en uno solo (global)
+        global_df = pd.concat(list(dfs_por_año.values()), ignore_index=True)
+
+        st.success("Archivos cargados y datos procesados correctamente 🎉")
+        st.write("Ejemplo de datos:", global_df.head())  # Mostrar una vista previa
 
 # ------------------- Sección de Visualizaciones -------------------
 # Definir las opciones para el sidebar: "Global" y los años disponibles
