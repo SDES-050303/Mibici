@@ -357,7 +357,6 @@ st.subheader("💰 **Total de Dinero Gastado (Aproximado)**")
 
 # 🔹 **Verificar si la columna "Duración (min)" existe**
 if "Duración (min)" not in global_df.columns:
-    st.error("⚠️ ERROR: La columna 'Duración (min)' no existe. Se procederá a calcularla nuevamente.")
     
     # Convertir a datetime
     global_df["Inicio del viaje"] = pd.to_datetime(global_df["Inicio del viaje"], errors="coerce")
@@ -368,7 +367,6 @@ if "Duración (min)" not in global_df.columns:
     
     # Eliminar valores negativos o nulos
     global_df = global_df[global_df["Duración (min)"] > 0]
-    st.success("✅ 'Duración (min)' calculada y corregida.")
 
 # 🔹 **Aplicar la función de costos**
 df_costos = global_df.copy()
@@ -388,23 +386,12 @@ labels = ["0-30 min", "31-60 min", "61-90 min", "91-120 min", "121-150 min",
           "151-180 min", "181-210 min", "211-240 min", "241-300 min", "300+ min"]
 df_costos["Rango de Tiempo"] = pd.cut(df_costos["Duración (min)"], bins=bins, labels=labels, right=False)
 
-# 🔹 **Gráfico de Gasto Total por Duración del Viaje**
-costos_por_rango = df_costos.groupby("Rango de Tiempo")["Costo (MXN)"].sum().reset_index()
-
-fig3, ax3 = plt.subplots(figsize=(12, 6))
-sns.barplot(data=costos_por_rango, x="Rango de Tiempo", y="Costo (MXN)", palette="coolwarm", ax=ax3)
-ax3.set_xlabel("Duración del Viaje", fontsize=12)
-ax3.set_ylabel("Costo Total (MXN)", fontsize=12)
-ax3.set_title("💸 Gasto Total por Duración del Viaje", fontsize=14)
-plt.xticks(rotation=45)
-plt.tight_layout()
-st.pyplot(fig3)
 
 # -------------------------------------
 # 📊 **Análisis de Uso de Estaciones**
 # -------------------------------------
 
-st.subheader("📊 Uso de Estaciones (Día - Mes - Año - Inicio - Fin)")
+st.subheader("📊 Uso de Estaciones (Mes - Año - Inicio - Fin)")
 
 # 🔹 **Verificar si la columna 'Inicio del viaje' existe y convertirla a datetime si es necesario**
 if "Inicio del viaje" not in global_df.columns:
@@ -412,28 +399,18 @@ if "Inicio del viaje" not in global_df.columns:
     global_df["Inicio del viaje"] = pd.to_datetime(global_df["Inicio del viaje"], errors="coerce")
 
 # 🔹 **Crear columnas adicionales para análisis**
-global_df["Día de la Semana"] = global_df["Inicio del viaje"].dt.day_name()
 global_df["Mes"] = global_df["Inicio del viaje"].dt.month
 global_df["Año"] = global_df["Inicio del viaje"].dt.year
-global_df["Hora"] = global_df["Inicio del viaje"].dt.hour
 
 # 🔹 **Definir opciones de análisis en el Sidebar**
 st.sidebar.markdown("---")
 tipo_grafico = st.sidebar.selectbox(
     "📊 Selecciona el Tipo de Análisis:", 
-    ["Uso por Día de la Semana", "Uso por Mes", "Uso por Año", "Uso por Hora", "Comparación Inicio vs Fin"]
+    ["Uso por Mes", "Uso por Año", "Comparación Inicio vs Fin"]
 )
 
 # 🔹 **Diccionario de opciones para gráficos**
 graficos = {
-    "Uso por Día de la Semana": {
-        "col": "Día de la Semana",
-        "titulo": "Uso de Mibici por Día de la Semana",
-        "xlabel": "Día de la Semana",
-        "xticks": ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"],
-        "paleta": "pastel",
-        "tipo": "bar"
-    },
     "Uso por Mes": {
         "col": "Mes",
         "titulo": "Uso de Mibici por Mes",
@@ -448,14 +425,6 @@ graficos = {
         "xlabel": "Año",
         "xticks": None,
         "paleta": "Blues",
-        "tipo": "line"
-    },
-    "Uso por Hora": {
-        "col": "Hora",
-        "titulo": "Uso de Mibici por Hora del Día",
-        "xlabel": "Hora del Día",
-        "xticks": list(range(0, 24)),
-        "paleta": "Greens",
         "tipo": "line"
     }
 }
@@ -519,6 +488,7 @@ elif tipo_grafico == "Comparación Inicio vs Fin":
     plt.xticks(rotation=45)
     plt.tight_layout()
     st.pyplot(fig)
+
 
 # -----------------------------------------
 # 🔹 Análisis de Correlación Edad - Tiempo de Viaje
