@@ -139,3 +139,17 @@ else:
     ax2.set_xticklabels(["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"])
     plt.tight_layout()
     st.pyplot(fig2)
+
+#------------------------------------------------------------------Promedio en viajes---------------------------------------------
+
+# Filtrar valores extremos (evita outliers raros en la gráfica)
+global_df_filtrado = global_df[global_df["Duración (min)"] < 120]  # Solo viajes de menos de 2 horas
+
+# Graficar histograma
+st.subheader("Distribución del tiempo de viaje")
+fig, ax = plt.subplots(figsize=(10, 5))
+sns.histplot(global_df_filtrado["Duración (min)"], bins=30, kde=True, color="blue", ax=ax)
+ax.set_xlabel("Duración del viaje (minutos)", fontsize=12)
+ax.set_ylabel("Cantidad de viajes", fontsize=12)
+ax.set_title("Distribución de la duración de los viajes", fontsize=14)
+st.pyplot(fig)
