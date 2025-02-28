@@ -15,14 +15,23 @@ st.image("./IMG/Foto de estacion mi bici.jpg", use_container_width=True)
 
 st.title("🚴‍♂️ Análisis de Datos Mibici")
 st.markdown("""
-Este dashboard analiza **Mibici** a lo largo de 10 años con gráficos interactivos y estadísticas.  
-Los datos provienen de [Mibici - Datos Abiertos](https://www.mibici.net/es/datos-abiertos/).  
-💡 **Sube un archivo ZIP con los datos** para comenzar el análisis.
+EEste dashboard explora el uso de Mibici a lo largo de los últimos 10 años mediante gráficos y estadísticas detalladas.
+Los datos provienen de la plataforma de Mibici - Datos Abiertos y permiten analizar tendencias, patrones de uso y mucho más.
+
+📊 ¿Qué puedes descubrir?
+✔️ Uso mensual y anual de las bicicletas.
+✔️ Estaciones más utilizadas.
+✔️ Comparación de viajes por hora y día de la semana.
+✔️ Distancia recorrida, duración promedio y costos estimados.
+
+📂 Para comenzar:
+Sube un archivo ZIP con los datos y explora la información de manera visual e interactiva. 🚀
 """)
 
 # -----------------------------------------
 # 🔹 Sidebar: Configuración y Carga de Datos
 # -----------------------------------------
+st.sidebar.title("./IMG/Mibici_logo.jpg")
 st.sidebar.title("⚙️ Configuración")
 uploaded_file = st.sidebar.file_uploader("📁 Sube el ZIP con los datos", type="zip")
 
@@ -119,6 +128,10 @@ ax.set_ylabel("Total de Viajes")
 ax.set_xticks(range(1, 13))
 ax.set_xticklabels(["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"])
 st.pyplot(fig)
+st.text("📌 Este gráfico muestra la evolución mensual del número de viajes en Mibici, agrupados por año. "
+        "Cada línea representa un año distinto, permitiendo identificar patrones estacionales y tendencias de uso a lo largo del tiempo. "
+        "Se pueden observar meses con mayor o menor demanda, lo que ayuda a comprender cómo varía el uso del sistema de bicicletas compartidas.")
+
 
 # -----------------------------------------
 # 📊 Uso de Estaciones (Top 10)
@@ -134,6 +147,11 @@ ax.set_xlabel("Estación")
 ax.set_ylabel("Número de Viajes")
 ax.set_title("Top 10 Estaciones con Más Viajes")
 st.pyplot(fig)
+st.text("📌 Este gráfico muestra las 10 estaciones con mayor cantidad de viajes registrados como punto de origen. "
+        "Se analiza la frecuencia con la que cada estación es utilizada para iniciar un viaje, permitiendo identificar "
+        "las ubicaciones más concurridas dentro del sistema Mibici. Esto puede ayudar en la planificación de infraestructura "
+        "y optimización del servicio.")
+
 
 # -----------------------------------------
 # 🔹 Función para Calcular Promedio de Viajes
@@ -151,6 +169,11 @@ def calcular_promedio_viajes(df, group_col, value_name="Total de Viajes"):
     promedio = viajes[value_name].mean()
     
     return viajes, promedio
+
+st.text("📌 Esta función calcula el número total de viajes agrupados por una categoría específica, "
+        "como el año o la estación de origen. Además, obtiene el promedio de viajes dentro de esa categoría, "
+        "lo que permite evaluar tendencias y comparar la demanda entre distintos periodos o ubicaciones.")
+
 
 # -----------------------------------------
 # 📊 Promedio de Viajes por Estación
@@ -177,6 +200,10 @@ if viajes_por_estacion is not None:
     plt.xticks(rotation=45)
     plt.tight_layout()
     st.pyplot(fig)
+    st.text("📌 En esta sección, se calcula el promedio de viajes realizados desde cada estación. "
+        "Además, se identifican las 10 estaciones con mayor número de viajes, mostrando tanto una tabla "
+        "como una gráfica de barras que ilustra las estaciones más utilizadas en el sistema Mibici.")
+
 
 # -----------------------------------------
 # 📆 Promedio de Viajes por Año
@@ -197,6 +224,10 @@ if viajes_por_año is not None:
     plt.xticks(rotation=45)
     plt.tight_layout()
     st.pyplot(fig)
+    st.text("📆 En esta sección, se analiza el promedio de viajes realizados por año. "
+        "Se presenta un cálculo del total de viajes por año junto con un promedio general, "
+        "además de una gráfica de línea que muestra la evolución del uso del sistema Mibici a lo largo del tiempo.")
+
 
 # -----------------------------------------
 # 📍 Función para Calcular Distancia Recorrida
@@ -216,10 +247,16 @@ def calcular_distancia(row):
             return geodesic(origen, destino).km  # Distancia geodésica real
     except:
         return np.nan  # Si hay un error, devuelve NaN
+    
+
+st.text("📊 Este valor representa el promedio de viajes iniciados desde cada estación. "
+        "Se calcula dividiendo el total de viajes registrados entre el número de estaciones "
+        "únicas en el sistema. Este indicador ayuda a identificar la demanda promedio por estación.")
 
 # -----------------------------------------
 # 🚴 Cálculo de Distancia Recorrida
 # -----------------------------------------
+
 st.subheader("📏 **Aproximación de Distancia Recorrida**")
 
 df_distancia = global_df.copy()
@@ -254,6 +291,12 @@ ax.set_xlabel("Distancia Recorrida (km)")
 ax.set_ylabel("Frecuencia")
 ax.set_title("Distribución de Distancias Recorridas")
 st.pyplot(fig)
+st.text("📏 Esta sección muestra una estimación de la distancia recorrida en cada viaje. "
+        "La distancia se calcula de dos formas: si hay coordenadas de origen y destino, "
+        "se utiliza la distancia geodésica real; si no, se estima con una velocidad promedio "
+        "de 15 km/h basada en la duración del viaje. Este análisis ayuda a entender los "
+        "patrones de movilidad de los usuarios en el sistema Mibici. 🚲📍")
+
 
 # -----------------------------------------
 # 🔥 Comparación de Tiempo de Viaje por Ruta y Género
@@ -287,6 +330,11 @@ ax2.set_ylabel("Duración Promedio (min)")
 ax2.set_title("Comparación del Tiempo de Viaje por Ruta y Género")
 ax2.tick_params(axis='x', rotation=45)
 st.pyplot(fig2)
+st.text("⏳ Esta sección analiza la duración de los viajes en función del género del usuario y la ruta tomada. "
+        "Se presentan dos visualizaciones: un diagrama de cajas que muestra la distribución del tiempo de viaje "
+        "según el género y un gráfico de barras que compara la duración promedio de las 10 rutas más populares "
+        "para cada género. Este análisis ayuda a identificar diferencias en los patrones de viaje y posibles "
+        "factores que influyen en la duración de los trayectos. 🚴‍♂️🚴‍♀️📊")
 
 # -----------------------------------------
 # 📊 Función para calcular los viajes por día de la semana
@@ -331,6 +379,11 @@ ax2.set_title("Tendencia de Uso por Día de la Semana", fontsize=14)
 plt.xticks(rotation=45)
 plt.tight_layout()
 st.pyplot(fig2)
+st.text("📅 Este análisis examina el uso de Mibici según el día de la semana. Se presentan dos visualizaciones: "
+        "un gráfico de barras que muestra el número total de viajes para cada día y un gráfico de líneas que "
+        "representa la tendencia de uso a lo largo de la semana. Este estudio permite identificar patrones "
+        "de demanda, como días con mayor actividad o posibles variaciones en el uso del sistema. 🚴‍♂️📊")
+
 
 # -----------------------------------------
 # 💰 Función para Calcular el Costo de los Viajes
@@ -385,6 +438,11 @@ bins = [0, 30, 60, 90, 120, 150, 180, 210, 240, 300, np.inf]
 labels = ["0-30 min", "31-60 min", "61-90 min", "91-120 min", "121-150 min",
           "151-180 min", "181-210 min", "211-240 min", "241-300 min", "300+ min"]
 df_costos["Rango de Tiempo"] = pd.cut(df_costos["Duración (min)"], bins=bins, labels=labels, right=False)
+st.text("💰 Este análisis estima el gasto total generado por los usuarios de Mibici en función del tiempo de uso. "
+        "Se calcula el costo de cada viaje con base en la duración en minutos y se presenta un ejemplo de los primeros "
+        "10 registros. Además, se muestra el gasto total aproximado y se categorizan los viajes en rangos de tiempo "
+        "para analizar cómo varían los costos según la duración. 📊🚴‍♂️")
+
 
 
 # -------------------------------------
@@ -488,7 +546,10 @@ elif tipo_grafico == "Comparación Inicio vs Fin":
     plt.xticks(rotation=45)
     plt.tight_layout()
     st.pyplot(fig)
-
+    st.text("📊 Este análisis muestra el uso de las estaciones de Mibici en función del mes y el año. "
+        "Se presentan gráficos que permiten visualizar la evolución del uso de bicicletas a lo largo del tiempo, "
+        "ayudando a identificar tendencias de uso estacional. También se compara el número de viajes iniciados y finalizados "
+        "en las estaciones más utilizadas para analizar los patrones de movilidad urbana. 🚴‍♂️📈")
 
 # -----------------------------------------
 # 🔹 Análisis de Correlación Edad - Tiempo de Viaje
@@ -498,31 +559,40 @@ st.subheader("📊 **Correlación entre Edad y Tiempo de Viaje**")
 # 🔹 **Verificar si las columnas necesarias existen**
 if "Año de nacimiento" in global_df.columns and "Duración (min)" in global_df.columns:
     
-    # 🔹 **Eliminar valores nulos y calcular la edad**
+    # 🔹 **Eliminar valores nulos y convertir el año de nacimiento a número**
     df_edad_tiempo = global_df[["Año de nacimiento", "Duración (min)"]].dropna().copy()
-    df_edad_tiempo["Edad"] = pd.to_datetime("today").year - df_edad_tiempo["Año de nacimiento"]
+    df_edad_tiempo["Año de nacimiento"] = df_edad_tiempo["Año de nacimiento"].astype(int, errors='ignore')
+
+    # 🔹 **Obtener el año actual correctamente**
+    año_actual = pd.Timestamp.today().year
+    df_edad_tiempo["Edad"] = año_actual - df_edad_tiempo["Año de nacimiento"]
 
     # 🔹 **Eliminar edades fuera de un rango razonable (10 a 100 años)**
     df_edad_tiempo = df_edad_tiempo[(df_edad_tiempo["Edad"] >= 10) & (df_edad_tiempo["Edad"] <= 100)]
     
     # 🔹 **Cálculo de la correlación**
-    correlacion = df_edad_tiempo["Edad"].corr(df_edad_tiempo["Duración (min)"])
-
-    st.write(f"🔢 **Coeficiente de Correlación Pearson:** {correlacion:.3f}")
-
-    # 🔹 **Gráfico de Dispersión**
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.scatterplot(data=df_edad_tiempo, x="Edad", y="Duración (min)", alpha=0.3, color="blue", ax=ax)
-    sns.regplot(data=df_edad_tiempo, x="Edad", y="Duración (min)", scatter=False, color="red", ax=ax)
-    
-    ax.set_xlabel("Edad del Usuario", fontsize=12)
-    ax.set_ylabel("Duración del Viaje (min)", fontsize=12)
-    ax.set_title("📉 Relación entre Edad y Tiempo de Viaje", fontsize=14)
-    plt.tight_layout()
-    st.pyplot(fig)
+    if not df_edad_tiempo.empty:
+        correlacion = df_edad_tiempo["Edad"].corr(df_edad_tiempo["Duración (min)"])
+        st.write(f"🔢 **Coeficiente de Correlación Pearson:** {correlacion:.3f}")
+        
+        # 🔹 **Gráfico de Dispersión**
+        fig, ax = plt.subplots(figsize=(10, 5))
+        sns.scatterplot(data=df_edad_tiempo, x="Edad", y="Duración (min)", alpha=0.3, color="blue", ax=ax)
+        sns.regplot(data=df_edad_tiempo, x="Edad", y="Duración (min)", scatter=False, color="red", ax=ax)
+        
+        ax.set_xlabel("Edad del Usuario", fontsize=12)
+        ax.set_ylabel("Duración del Viaje (min)", fontsize=12)
+        ax.set_title("📉 Relación entre Edad y Tiempo de Viaje", fontsize=14)
+        plt.tight_layout()
+        st.pyplot(fig)
 
 else:
     st.error("⚠️ No se encontraron las columnas necesarias ('Año de nacimiento' y 'Duración (min)').")
+
+st.text("📊 Este análisis evalúa la relación entre la edad del usuario y la duración de su viaje en Mibici. "
+        "Se calcula la correlación de Pearson entre ambas variables y se presenta en un gráfico de dispersión "
+        "con una línea de tendencia. Esto permite observar si existe alguna tendencia en la duración del viaje "
+        "según la edad de los ciclistas y si los usuarios más jóvenes o mayores tienden a realizar viajes más largos o cortos. 🚴‍♂️📉")
 
 # -----------------------------------------
 # 🔹 Análisis de Correlación Día de la Semana - Tiempo de Viaje
@@ -558,6 +628,11 @@ if "Inicio del viaje" in global_df.columns and "Duración (min)" in global_df.co
     plt.xticks(rotation=45)
     plt.tight_layout()
     st.pyplot(fig)
+    st.text("📊 Este análisis examina la relación entre el día de la semana y la duración de los viajes en Mibici. "
+        "Se calcula el coeficiente de correlación de Pearson para evaluar si existe una tendencia en la duración "
+        "de los viajes según el día. Además, se presenta un gráfico de caja (boxplot) para visualizar la distribución "
+        "de los tiempos de viaje en cada día de la semana, permitiendo identificar patrones o diferencias significativas "
+        "en el uso de Mibici a lo largo de la semana. 🚴‍♂️📅")
 
 else:
     st.error("⚠️ No se encontraron las columnas necesarias ('Inicio del viaje' y 'Duración (min)').")
