@@ -7,317 +7,312 @@ from geopy.distance import geodesic
 import zipfile
 from io import BytesIO
 
-st.image("./IMG/Foto de estacion mi bici.jpg", use_container_width=True)
+# -----------------------------------------
+# 🔹 Configuración Inicial de Streamlit
+# -----------------------------------------
+st.set_page_config(page_title="Análisis Mibici", layout="wide")
+st.image("./IMG/Foto_de_estacion_mibici.jpg", use_container_width=True)
 
-st.title("Análisis Mibici")
-st.header("Introducción")
-st.subheader("Análisis de datos de Mibici")
-st.markdown("""En este repertorio podemos notar un análisis de datos sobre cómo las bicicletas **Mibici** fueron utilizadas a través de los 10 años
-que han estado activas. Vamos a descubrir datos que nunca esperaríamos conocer si no fuera por el análisis profundo que se registró y se compartió en
-[Datos Abiertos Mibici](https://www.mibici.net/es/datos-abiertos/). ¡Por favor, utiliza los datos de manera correcta!""")
+st.title("🚴‍♂️ Análisis de Datos Mibici")
+st.markdown("""
+Este dashboard analiza **Mibici** a lo largo de 10 años con gráficos interactivos y estadísticas.  
+Los datos provienen de [Mibici - Datos Abiertos](https://www.mibici.net/es/datos-abiertos/).  
+💡 **Sube un archivo ZIP con los datos** para comenzar el análisis.
+""")
 
-st.markdown("**Advertencia** Se necesita subir un zip para los datos")
+# -----------------------------------------
+# 🔹 Sidebar: Configuración y Carga de Datos
+# -----------------------------------------
+st.sidebar.title("⚙️ Configuración")
+uploaded_file = st.sidebar.file_uploader("📁 Sube el ZIP con los datos", type="zip")
 
-# ------------------- Configuración del Sidebar -------------------
-st.sidebar.title("Panel de Control")
-st.sidebar.markdown("### Opciones de Filtrado")
-st.sidebar.image("./IMG/Mibici_logo.jpg", use_container_width=True)
-st.sidebar.title("Subir archivo ZIP")
-uploaded_file = st.sidebar.file_uploader("Sube el ZIP con los datos", type="zip")
+# -----------------------------------------
+# 🔹 Cargar nomenclatura de estaciones
+# -----------------------------------------
+@st.cache_data
+def cargar_nomenclatura():
+    try:
+        return pd.read_csv("./datos/Nomenclatura_de_estaciones/nomenclatura_2025_01.csv", encoding='latin-1')
+    except Exception as e:
+        st.sidebar.error(f"⚠️ Error al cargar la nomenclatura: {e}")
+        return None
 
-# ------------------- Cargar archivos limpios por año -------------------
-# Cargar nomenclatura de estaciones
-nomenclatura = pd.read_csv("./datos/Nomenclatura de las estaciones/nomenclatura_2025_01.csv", encoding='latin-1')
+nomenclatura = cargar_nomenclatura()
 
-# Diccionario para almacenar los DataFrames de cada año
-dfs_por_año = {}
+# -----------------------------------------
+# 🔹 Función para Cargar y Procesar Datos ZIP
+# -----------------------------------------
+@st.cache_data
+def cargar_datos_zip(zip_file):
+    """Carga y procesa los archivos CSV dentro del ZIP."""
+    dfs_por_año = {}
+    
+    try:
+        with zipfile.ZipFile(zip_file, "r") as z:
+            archivos_csv = [f for f in z.namelist() if f.endswith(".csv")]
 
-if uploaded_file is not None:
-    with zipfile.ZipFile(uploaded_file, "r") as z:
-        archivos_csv = [f for f in z.namelist() if f.endswith(".csv")]  # Obtener todos los CSV
+            for archivo in archivos_csv:
+                with z.open(archivo) as f:
+                    df = pd.read_csv(f, encoding='latin-1')
 
-        st.write(f"Archivos encontrados en el ZIP: {archivos_csv}")
+                    # Renombrar columnas
+                    df.rename(columns={
+                        'Usuario_Id': 'Usuario Id',
+                        'Año_de_nacimiento': 'Año de nacimiento',
+                        'Inicio_del_viaje': 'Inicio del viaje',
+                        'Fin_del_viaje': 'Fin del viaje',
+                        'Origen_Id': 'Origen Id',
+                        'Destino_Id': 'Destino Id',
+                        'Viaje_Id': 'Viaje Id'
+                    }, inplace=True)
 
-        # Leer cada archivo CSV en un diccionario
-        for archivo in archivos_csv:
-            with z.open(archivo) as f:
-                df = pd.read_csv(f, encoding='latin-1')
-                
-                # Renombrar columnas para homogeneizar
-                df.rename(columns={
-                    'Usuario_Id': 'Usuario Id',
-                    'Año_de_nacimiento': 'Año de nacimiento',
-                    'Inicio_del_viaje': 'Inicio del viaje',
-                    'Fin_del_viaje': 'Fin del viaje',
-                    'Origen_Id': 'Origen Id',
-                    'Destino_Id': 'Destino Id',
-                    'Viaje_Id': 'Viaje Id',
-                    'AÃ±o_de_nacimiento': 'Año de nacimiento',
-                    'A}äe_nacimiento': 'Año de nacimiento',
-                    'Aï¿½o_de_nacimiento': 'Año de nacimiento'
-                }, inplace=True)
+                    # Convertir fechas y extraer Año y Mes
+                    df["Inicio del viaje"] = pd.to_datetime(df["Inicio del viaje"], errors="coerce")
+                    df["Fin del viaje"] = pd.to_datetime(df["Fin del viaje"], errors="coerce")
+                    df["Año"] = df["Inicio del viaje"].dt.year
+                    df["Mes"] = df["Inicio del viaje"].dt.month
 
-                # Convertir fechas y extraer Año y Mes
-                df["Inicio del viaje"] = pd.to_datetime(df["Inicio del viaje"], errors="coerce")
-                df["Año"] = df["Inicio del viaje"].dt.year
-                df["Mes"] = df["Inicio del viaje"].dt.month
+                    # Extraer el año desde el nombre del archivo
+                    año = archivo.split("_")[1][:4]
+                    dfs_por_año[año] = df
 
-                # Extraer el año desde el nombre del archivo
-                año = archivo.split("_")[1][:4]  # Ajusta según el nombre de tus archivos
-                dfs_por_año[año] = df  # Guardar en el diccionario
+        global_df = pd.concat(dfs_por_año.values(), ignore_index=True)
+        return dfs_por_año, global_df
 
-        # Unir todos los DataFrames en uno solo (global)
-        global_df = pd.concat(list(dfs_por_año.values()), ignore_index=True)
+    except Exception as e:
+        st.error(f"⚠️ Error al procesar el archivo ZIP: {e}")
+        return None, None
 
-        st.success("Archivos cargados y datos procesados correctamente 🎉")
-
-# ------------------- Sección de Visualizaciones -------------------
-# Definir las opciones para el sidebar: "Global" y los años disponibles
-opciones_año = ["Global"] + sorted(list(dfs_por_año.keys()))
-
-# Sidebar para Top 10 estaciones
-st.sidebar.markdown("---")
-st.sidebar.text("Top 10 estaciones con más viajes")
-seleccion_top = st.sidebar.selectbox("Selecciona el año", opciones_año, index=0, key="select_top")
-
-if seleccion_top != "Global":
-    df_top = dfs_por_año[seleccion_top]
+# -----------------------------------------
+# 🔹 Cargar Datos desde ZIP
+# -----------------------------------------
+if uploaded_file:
+    dfs_por_año, global_df = cargar_datos_zip(uploaded_file)
+    if global_df is not None:
+        st.sidebar.success("✅ Datos cargados correctamente.")
+    else:
+        st.sidebar.error("⚠️ No se pudieron cargar los datos.")
+        st.stop()
 else:
-    df_top = global_df
+    st.sidebar.warning("⚠️ Carga un archivo ZIP para continuar.")
+    st.stop()
 
-# Agrupación por estaciones para Top 10
-viajes_por_origen = df_top["Origen Id"].value_counts().reset_index()
-viajes_por_origen.columns = ["Estación", "Viajes desde"]
-viajes_por_destino = df_top["Destino Id"].value_counts().reset_index()
-viajes_por_destino.columns = ["Estación", "Viajes hacia"]
+# -----------------------------------------
+# 🔹 Sidebar: Selección de Año
+# -----------------------------------------
+opciones_año = ["Global"] + sorted(dfs_por_año.keys())
+seleccion_año = st.sidebar.selectbox("📆 Selecciona un Año", opciones_año)
 
-uso_estaciones = viajes_por_origen.merge(viajes_por_destino, on="Estación", how="outer").fillna(0)
-uso_estaciones["Total de viajes"] = uso_estaciones["Viajes desde"] + uso_estaciones["Viajes hacia"]
-uso_estaciones = uso_estaciones.sort_values(by="Total de viajes", ascending=False)
+df_seleccionado = global_df if seleccion_año == "Global" else dfs_por_año[seleccion_año]
 
-st.subheader(f"Top 10 Estaciones con Más Viajes para: {seleccion_top}")
-top_estaciones = uso_estaciones.head(10)
-st.dataframe(top_estaciones.reset_index(drop=True))
+# -----------------------------------------
+# 📊 Número de Viajes por Mes y Año
+# -----------------------------------------
+st.subheader("📊 Número de Viajes por Mes y Año")
 
-# Gráfica
-st.subheader(f"Grafica Top 10 Estaciones con Más Viajes para: {seleccion_top}")
-fig, ax = plt.subplots(figsize=(12, 6))
-sns.barplot(x=top_estaciones["Estación"], y=top_estaciones["Total de viajes"], palette="viridis", ax=ax)
-ax.set_xlabel("Estación", fontsize=12)
-ax.set_ylabel("Total de Viajes", fontsize=12)
-ax.set_title(f"Top 10 Estaciones con Más Viajes para: {seleccion_top}", fontsize=14)
-ax.tick_params(axis='x', rotation=45)
-plt.tight_layout()
+viajes_mensuales = df_seleccionado.groupby(["Año", "Mes"]).size().reset_index(name="Total de Viajes")
+
+fig, ax = plt.subplots(figsize=(14, 6))
+sns.lineplot(data=viajes_mensuales, x="Mes", y="Total de Viajes", hue="Año", palette="tab10", marker="o", ax=ax)
+ax.set_xlabel("Mes")
+ax.set_ylabel("Total de Viajes")
+ax.set_xticks(range(1, 13))
+ax.set_xticklabels(["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"])
 st.pyplot(fig)
 
-# ------------------- Gráfica Global: Número de Viajes por Mes y Año -------------------
-st.subheader("Gráfica Número de Viajes por Mes y Año")
-df_mes = global_df.copy()
+# -----------------------------------------
+# 📊 Uso de Estaciones (Top 10)
+# -----------------------------------------
+st.subheader("🚴‍♂️ Top 10 Estaciones con Más Viajes")
 
-# Verificación de columnas antes de agrupar
-if "Año" not in df_mes.columns or "Mes" not in df_mes.columns:
-    st.error("Las columnas 'Año' y 'Mes' no existen en df_mes. Verifica que los datos están bien cargados.")
-    st.write("Columnas disponibles en df_mes:", df_mes.columns)
-else:
-    # Agrupar por Año y Mes
-    viajes_mensuales = df_mes.groupby(["Año", "Mes"]).size().reset_index(name="Total de viajes")
+viajes_origen = df_seleccionado["Origen Id"].value_counts().head(10).reset_index()
+viajes_origen.columns = ["Estación", "Viajes"]
 
-    fig2, ax2 = plt.subplots(figsize=(14, 6))
-    sns.lineplot(
-        data=viajes_mensuales,
-        x="Mes",
-        y="Total de viajes",
-        hue="Año",
-        palette="tab10",
-        marker="o",
-        ax=ax2
-    )
-    ax2.set_xlabel("Mes", fontsize=12)
-    ax2.set_ylabel("Total de Viajes", fontsize=12)
-    ax2.set_title("Número de Viajes por Mes y Año (Global)", fontsize=14)
-    ax2.set_xticks(range(1, 13))
-    ax2.set_xticklabels(["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"])
+fig, ax = plt.subplots(figsize=(12, 6))
+sns.barplot(data=viajes_origen, x="Estación", y="Viajes", palette="viridis", ax=ax)
+ax.set_xlabel("Estación")
+ax.set_ylabel("Número de Viajes")
+ax.set_title("Top 10 Estaciones con Más Viajes")
+st.pyplot(fig)
+
+# -----------------------------------------
+# 🔹 Función para Calcular Promedio de Viajes
+# -----------------------------------------
+def calcular_promedio_viajes(df, group_col, value_name="Total de Viajes"):
+    """Agrupa los datos por una columna y calcula el total y promedio de viajes."""
+    if group_col not in df.columns:
+        st.error(f"⚠️ ERROR: La columna '{group_col}' no está en los datos.")
+        return None, None
+    
+    # Agrupar por la columna dada y contar el número de viajes
+    viajes = df.groupby(group_col).size().reset_index(name=value_name)
+    
+    # Calcular el promedio
+    promedio = viajes[value_name].mean()
+    
+    return viajes, promedio
+
+# -----------------------------------------
+# 📊 Promedio de Viajes por Estación
+# -----------------------------------------
+st.subheader("📌 Promedio de Viajes por Estación")
+
+viajes_por_estacion, promedio_viajes_estacion = calcular_promedio_viajes(global_df, "Origen Id")
+
+if viajes_por_estacion is not None:
+    st.write(f"📊 **Promedio de viajes por estación:** {promedio_viajes_estacion:.2f} viajes")
+
+    # 🔹 Mostrar Top 10 Estaciones con más viajes
+    top_10_estaciones = viajes_por_estacion.sort_values(by="Total de Viajes", ascending=False).head(10)
+
+    st.subheader("🚲 **Top 10 Estaciones con Más Viajes**")
+    st.dataframe(top_10_estaciones)
+
+    # 🔹 Gráfica de los 10 primeros promedios de viajes por estación
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.barplot(x=top_10_estaciones['Origen Id'], y=top_10_estaciones['Total de Viajes'], palette="viridis", ax=ax)
+    ax.set_xlabel('Estación')
+    ax.set_ylabel('Total de Viajes')
+    ax.set_title('Top 10 Estaciones con Más Viajes')
+    plt.xticks(rotation=45)
     plt.tight_layout()
-    st.pyplot(fig2)
+    st.pyplot(fig)
 
-#------------------------------------------------------------------Promedio en viajes---------------------------------------------
+# -----------------------------------------
+# 📆 Promedio de Viajes por Año
+# -----------------------------------------
+st.subheader("📆 Promedio de Viajes por Año")
 
-# Calcular el número de viajes por estación (origen y destino)
-viajes_por_estacion = global_df.groupby('Origen Id').size().reset_index(name="Total de Viajes")
+viajes_por_año, promedio_viajes_año = calcular_promedio_viajes(global_df, "Año")
 
-# Calcular el promedio de viajes por estación
-promedio_viajes = viajes_por_estacion["Total de Viajes"].mean()
+if viajes_por_año is not None:
+    st.write(f"📊 **Promedio de viajes por año:** {promedio_viajes_año:.2f} viajes")
 
-# Mostrar el promedio
-st.write(f"Promedio de viajes por estación: {promedio_viajes:.2f} viajes")
-#-------------------------------------------------------------------------------------------
-# Agrupar por "Año" y contar el número de viajes
-viajes_por_año = global_df.groupby("Año").size().reset_index(name="Total de Viajes")
+    # 🔹 Gráfica de la evolución de viajes por año
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.lineplot(data=viajes_por_año, x="Año", y="Total de Viajes", marker="o", color="b", ax=ax)
+    ax.set_xlabel("Año")
+    ax.set_ylabel("Número de Viajes")
+    ax.set_title("📈 Evolución de Viajes por Año")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    st.pyplot(fig)
 
-# Calcular el promedio de viajes por año
-promedio_viajes_por_año = viajes_por_año["Total de Viajes"].mean()
+# -----------------------------------------
+# 📍 Función para Calcular Distancia Recorrida
+# -----------------------------------------
+def calcular_distancia(row):
+    """Calcula la distancia entre estaciones o la aproxima con velocidad promedio."""
+    try:
+        origen = (row['lat_origin'], row['lon_origin'])
+        destino = (row['lat_destination'], row['lon_destination'])
 
-# Mostrar el promedio de viajes por año
-st.write(f"Promedio de viajes por año: {promedio_viajes_por_año:.2f} viajes")
+        if pd.isna(origen[0]) or pd.isna(destino[0]):
+            return np.nan  # Si hay valores nulos, devuelve NaN
 
-#-------------------------------------------------------------------------------------------------
-# Agrupar por estación (origen) y contar el total de viajes
-viajes_por_estacion = global_df.groupby('Origen Id').size().reset_index(name="Total de Viajes")
+        if origen == destino:
+            return (row['Duración (min)'] / 60) * 15  # Aproximación por velocidad 15 km/h
+        else:
+            return geodesic(origen, destino).km  # Distancia geodésica real
+    except:
+        return np.nan  # Si hay un error, devuelve NaN
 
-# Calcular el promedio de viajes por estación
-promedio_por_estacion = viajes_por_estacion.groupby('Origen Id')['Total de Viajes'].mean().reset_index()
+# -----------------------------------------
+# 🚴 Cálculo de Distancia Recorrida
+# -----------------------------------------
+st.subheader("📏 **Aproximación de Distancia Recorrida**")
 
-# Ordenar de mayor a menor para ver las estaciones más populares
-promedio_por_estacion = promedio_por_estacion.sort_values(by='Total de Viajes', ascending=False)
-
-# Seleccionar el Top 10
-top_10_promedio = promedio_por_estacion.head(10)
-
-# Mostrar los resultados
-st.subheader("Top 10 Estaciones con Más Viajes")
-st.dataframe(top_10_promedio)
-
-#-------------------------------------------------------------------------------------------------------
-# Gráfica de los 10 primeros promedios de viajes por estación
-fig, ax = plt.subplots(figsize=(12, 6))
-sns.barplot(x=top_10_promedio['Origen Id'], y=top_10_promedio['Total de Viajes'], palette="viridis", ax=ax)
-ax.set_xlabel('Estación', fontsize=12)
-ax.set_ylabel('Total de Viajes', fontsize=12)
-ax.set_title('Top 10 Estaciones con Más Viajes', fontsize=14)
-plt.xticks(rotation=45)
-plt.tight_layout()
-st.pyplot(fig)
-
-#------------------------------------------------------------Aproximación de Distancia Recorrida------------------------
-
-st.subheader("Aproximación de Distancia Recorrida")
-
-# 🔹 **Copiar el DataFrame original para cálculos**
 df_distancia = global_df.copy()
 
-# 🔹 **Verificar si "Duración (min)" existe y calcularla si falta**
+# 🔹 **Validar y Calcular Duración si no existe**
 if "Duración (min)" not in df_distancia.columns:
     df_distancia["Inicio del viaje"] = pd.to_datetime(df_distancia["Inicio del viaje"], errors="coerce")
     df_distancia["Fin del viaje"] = pd.to_datetime(df_distancia["Fin del viaje"], errors="coerce")
     df_distancia["Duración (min)"] = (df_distancia["Fin del viaje"] - df_distancia["Inicio del viaje"]).dt.total_seconds() / 60
 
-# 🔹 **Cargar las coordenadas de la nomenclatura**
+# 🔹 **Cargar y unir coordenadas de la nomenclatura**
 nomenclatura = pd.read_csv("./datos/Nomenclatura de las estaciones/nomenclatura_2025_01.csv", encoding='latin-1')
+nomenclatura = nomenclatura.rename(columns={"id": "Estación", "latitude": "lat", "longitude": "lon"})
 
-# 🔹 **Renombrar columnas de nomenclatura para hacer merge más fácil**
-nomenclatura.rename(columns={
-    "id": "Origen Id",
-    "latitude": "lat_origin",
-    "longitude": "lon_origin"
-}, inplace=True)
+df_distancia = df_distancia.merge(nomenclatura[['Estación', 'lat', 'lon']], left_on="Origen Id", right_on="Estación", how="left")
+df_distancia = df_distancia.rename(columns={"lat": "lat_origin", "lon": "lon_origin"}).drop(columns=["Estación"])
 
-# 🔹 **Unir coordenadas de origen**
-df_distancia = df_distancia.merge(nomenclatura[['Origen Id', 'lat_origin', 'lon_origin']], on="Origen Id", how="left")
+df_distancia = df_distancia.merge(nomenclatura[['Estación', 'lat', 'lon']], left_on="Destino Id", right_on="Estación", how="left")
+df_distancia = df_distancia.rename(columns={"lat": "lat_destination", "lon": "lon_destination"}).drop(columns=["Estación"])
 
-# 🔹 **Renombrar "id" en nomenclatura a "Destino Id" para hacer el merge**
-nomenclatura.rename(columns={
-    "Origen Id": "Destino Id",
-    "lat_origin": "lat_destination",
-    "lon_origin": "lon_destination"
-}, inplace=True)
+# 🔹 **Aplicar función de cálculo de distancia**
+df_distancia["Distancia (km)"] = df_distancia.apply(calcular_distancia, axis=1)
 
-# 🔹 **Unir coordenadas de destino**
-df_distancia = df_distancia.merge(nomenclatura[['Destino Id', 'lat_destination', 'lon_destination']], on="Destino Id", how="left")
+# 🔹 **Mostrar datos de ejemplo**
+st.write("📌 **Ejemplo de Distancias Calculadas (Primeros 10 registros)**")
+st.dataframe(df_distancia[["Origen Id", "Destino Id", "Duración (min)", "Distancia (km)"]].head(10))
 
-# 🔹 **Mostrar datos después del merge**
-st.write("Ejemplo de datos con coordenadas después del merge:")
-st.dataframe(df_distancia[["Origen Id", "Destino Id", "Duración (min)", "lat_origin", "lon_origin", "lat_destination", "lon_destination"]].head(10))
+# 🔹 **Gráfico de Distribución de Distancias**
+fig, ax = plt.subplots(figsize=(12, 6))
+sns.histplot(df_distancia["Distancia (km)"], bins=30, kde=True, color="blue", ax=ax)
+ax.set_xlabel("Distancia Recorrida (km)")
+ax.set_ylabel("Frecuencia")
+ax.set_title("Distribución de Distancias Recorridas")
+st.pyplot(fig)
 
-# 🔹 **Función para calcular la distancia**
-def calcular_distancia(row):
-    try:
-        origen = (row['lat_origin'], row['lon_origin'])
-        destino = (row['lat_destination'], row['lon_destination'])
+# -----------------------------------------
+# 🔥 Comparación de Tiempo de Viaje por Ruta y Género
+# -----------------------------------------
+st.subheader("⏳ **Comparación de Tiempo de Viaje por Ruta y Género**")
 
-        # Si alguna coordenada es NaN, devolver NaN
-        if pd.isna(origen[0]) or pd.isna(destino[0]):
-            return np.nan  
-
-        if origen == destino:
-            # Asumimos velocidad promedio 15 km/h
-            return (row['Duración (min)'] / 60) * 15  # Distancia en km
-        else:
-            return geodesic(origen, destino).km  # Distancia geodésica en km
-    except Exception as e:
-        return np.nan  # Si hay algún error, devolver NaN
-
-# 🔹 **Aplicar la función y calcular la distancia**
-df_distancia['Distancia (km)'] = df_distancia.apply(calcular_distancia, axis=1)
-
-# 🔹 **Mostrar los primeros 10 viajes con su distancia**
-st.subheader("Ejemplo de Distancia Calculada (Primeros 10 registros)")
-st.dataframe(df_distancia[["Origen Id", "Destino Id", "Duración (min)", "Distancia (km)"]])
-
-#-------------------------------------------------- Grafico de comparacion Tiempo y Ruta / Genero ----------------------
-
-# -------------------------------------
-# 🔹 Comparación de Tiempo de Viaje por Ruta y Género
-# -------------------------------------
-
-st.subheader("Comparación de Tiempo de Viaje por Ruta y Género")
-
-# 🔹 Seleccionar las columnas necesarias
-df_genero_ruta = df_distancia[["Origen Id", "Destino Id", "Duración (min)", "Genero"]].copy()
-
-# 🔹 Crear una nueva columna para identificar cada ruta
+# 🔹 **Filtrar datos y generar rutas**
+df_genero_ruta = df_distancia[["Origen Id", "Destino Id", "Duración (min)", "Genero"]].dropna()
 df_genero_ruta["Ruta"] = df_genero_ruta["Origen Id"].astype(str) + " → " + df_genero_ruta["Destino Id"].astype(str)
 
-# 🔹 Eliminar valores nulos en "Duración (min)" y "Genero"
-df_genero_ruta = df_genero_ruta.dropna(subset=["Duración (min)", "Genero"])
-
-# 🔹 Gráfico 1: Distribución de tiempo de viaje por género (Boxplot)
+# 🔹 **Gráfico de Distribución de Tiempo de Viaje por Género**
 fig1, ax1 = plt.subplots(figsize=(12, 6))
 sns.boxplot(data=df_genero_ruta, x="Genero", y="Duración (min)", palette="pastel", ax=ax1)
-ax1.set_xlabel("Género", fontsize=12)
-ax1.set_ylabel("Duración del Viaje (min)", fontsize=12)
-ax1.set_title("Distribución del Tiempo de Viaje por Género", fontsize=14)
-plt.tight_layout()
+ax1.set_xlabel("Género")
+ax1.set_ylabel("Duración del Viaje (min)")
+ax1.set_title("Distribución del Tiempo de Viaje por Género")
 st.pyplot(fig1)
 
-# 🔹 Agrupar por ruta y género para obtener la duración promedio
+# 🔹 **Calcular Promedio de Duración por Ruta y Género**
 promedio_por_ruta = df_genero_ruta.groupby(["Ruta", "Genero"])["Duración (min)"].mean().reset_index()
 
-# 🔹 Seleccionar solo las 10 rutas más frecuentes
+# 🔹 **Seleccionar las 10 rutas más frecuentes**
 top_rutas = df_genero_ruta["Ruta"].value_counts().head(10).index
 df_top_rutas = promedio_por_ruta[promedio_por_ruta["Ruta"].isin(top_rutas)]
 
-# 🔹 Gráfico 2: Comparación del Tiempo de Viaje Promedio por Ruta y Género (Barras)
+# 🔹 **Gráfico de Comparación del Tiempo de Viaje por Ruta y Género**
 fig2, ax2 = plt.subplots(figsize=(14, 6))
 sns.barplot(data=df_top_rutas, x="Ruta", y="Duración (min)", hue="Genero", palette="muted", ax=ax2)
-ax2.set_xlabel("Ruta", fontsize=12)
-ax2.set_ylabel("Duración Promedio (min)", fontsize=12)
-ax2.set_title("Comparación del Tiempo de Viaje por Ruta y Género", fontsize=14)
+ax2.set_xlabel("Ruta")
+ax2.set_ylabel("Duración Promedio (min)")
+ax2.set_title("Comparación del Tiempo de Viaje por Ruta y Género")
 ax2.tick_params(axis='x', rotation=45)
-plt.tight_layout()
 st.pyplot(fig2)
 
-# -------------------------------------
-# 🔹 Análisis del uso de Mibici por días de la semana
-# -------------------------------------
+# -----------------------------------------
+# 📊 Función para calcular los viajes por día de la semana
+# -----------------------------------------
+def calcular_viajes_por_dia(df):
+    """Convierte fechas, obtiene días de la semana y cuenta viajes."""
+    df["Inicio del viaje"] = pd.to_datetime(df["Inicio del viaje"], errors="coerce")
+    df["Día de la Semana"] = df["Inicio del viaje"].dt.dayofweek
+    dias_semana = {0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves", 
+                   4: "Viernes", 5: "Sábado", 6: "Domingo"}
+    df["Día de la Semana"] = df["Día de la Semana"].map(dias_semana)
+    
+    # Contar viajes por día de la semana
+    viajes_por_dia = df["Día de la Semana"].value_counts().reindex(dias_semana.values()).reset_index()
+    viajes_por_dia.columns = ["Día de la Semana", "Número de Viajes"]
+    
+    return viajes_por_dia
 
-st.subheader("Uso de Mibici por Día de la Semana")
+# -----------------------------------------
+# 📊 Análisis de Uso por Día de la Semana
+# -----------------------------------------
+st.subheader("📅 **Uso de Mibici por Día de la Semana**")
 
-# 🔹 Asegurar que las fechas estén en formato datetime
-df_dias = global_df.copy()
-df_dias["Inicio del viaje"] = pd.to_datetime(df_dias["Inicio del viaje"], errors="coerce")
+viajes_por_dia = calcular_viajes_por_dia(global_df)
 
-# 🔹 Obtener el día de la semana (0=Lunes, 6=Domingo)
-df_dias["Día de la Semana"] = df_dias["Inicio del viaje"].dt.dayofweek
-
-# 🔹 Mapeo de números a nombres de días
-dias_semana = {0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves", 4: "Viernes", 5: "Sábado", 6: "Domingo"}
-df_dias["Día de la Semana"] = df_dias["Día de la Semana"].map(dias_semana)
-
-# 🔹 Contar los viajes por día de la semana
-viajes_por_dia = df_dias["Día de la Semana"].value_counts().reindex(dias_semana.values()).reset_index()
-viajes_por_dia.columns = ["Día de la Semana", "Número de Viajes"]
-
-# 🔹 Gráfico 1: Barras del número total de viajes por día de la semana
+# 🔹 **Gráfico de Barras: Número de Viajes por Día**
 fig1, ax1 = plt.subplots(figsize=(10, 5))
 sns.barplot(data=viajes_por_dia, x="Día de la Semana", y="Número de Viajes", palette="pastel", ax=ax1)
 ax1.set_xlabel("Día de la Semana", fontsize=12)
@@ -327,7 +322,7 @@ plt.xticks(rotation=45)
 plt.tight_layout()
 st.pyplot(fig1)
 
-# 🔹 Gráfico 2: Línea de la evolución del uso por día de la semana
+# 🔹 **Gráfico de Línea: Tendencia de Uso por Día**
 fig2, ax2 = plt.subplots(figsize=(10, 5))
 sns.lineplot(data=viajes_por_dia, x="Día de la Semana", y="Número de Viajes", marker="o", color="b", ax=ax2)
 ax2.set_xlabel("Día de la Semana", fontsize=12)
@@ -337,13 +332,9 @@ plt.xticks(rotation=45)
 plt.tight_layout()
 st.pyplot(fig2)
 
-# -------------------------------------
-# 🔹 Cálculo del Total de Dinero Gastado (Aproximado)
-# -------------------------------------
-
-st.subheader("Total de Dinero Gastado (Aproximado)")
-
-# 🔹 Función para calcular el costo según la duración del viaje
+# -----------------------------------------
+# 💰 Función para Calcular el Costo de los Viajes
+# -----------------------------------------
 def calcular_costo(duracion):
     """
     Calcula el costo adicional del viaje según su duración en minutos.
@@ -359,7 +350,12 @@ def calcular_costo(duracion):
         periodos_adicionales = np.ceil((duracion - 60) / 30)  # Cada 30 min adicionales
         return 29.0 + (periodos_adicionales * 40.0)
 
-# 🔹 Verificar si la columna "Duración (min)" existe
+# -----------------------------------------
+# 💰 Cálculo del Total de Dinero Gastado
+# -----------------------------------------
+st.subheader("💰 **Total de Dinero Gastado (Aproximado)**")
+
+# 🔹 **Verificar si la columna "Duración (min)" existe**
 if "Duración (min)" not in global_df.columns:
     st.error("⚠️ ERROR: La columna 'Duración (min)' no existe. Se procederá a calcularla nuevamente.")
     
@@ -374,149 +370,159 @@ if "Duración (min)" not in global_df.columns:
     global_df = global_df[global_df["Duración (min)"] > 0]
     st.success("✅ 'Duración (min)' calculada y corregida.")
 
-# 🔹 Aplicar la función de costos
+# 🔹 **Aplicar la función de costos**
 df_costos = global_df.copy()
 df_costos["Costo (MXN)"] = df_costos["Duración (min)"].apply(calcular_costo)
 
-# 🔹 Mostrar los primeros 10 registros
+# 🔹 **Mostrar los primeros 10 registros**
 st.write("📊 **Ejemplo de costos calculados (Primeros 10 registros):**")
 st.dataframe(df_costos[["Viaje Id", "Duración (min)", "Costo (MXN)"]].head(10))
 
-# 🔹 Calcular el gasto total
+# 🔹 **Calcular el gasto total**
 total_gasto = df_costos["Costo (MXN)"].sum()
 st.write(f"💰 **Gasto Total Aproximado:** ${total_gasto:,.2f} MXN")
 
-# 🔹 Agrupar por rangos de duración del viaje
+# 🔹 **Agrupar por rangos de duración del viaje**
 bins = [0, 30, 60, 90, 120, 150, 180, 210, 240, 300, np.inf]
 labels = ["0-30 min", "31-60 min", "61-90 min", "91-120 min", "121-150 min",
           "151-180 min", "181-210 min", "211-240 min", "241-300 min", "300+ min"]
 df_costos["Rango de Tiempo"] = pd.cut(df_costos["Duración (min)"], bins=bins, labels=labels, right=False)
 
-# 🔹 Calcular total de costos por rango
+# 🔹 **Gráfico de Gasto Total por Duración del Viaje**
 costos_por_rango = df_costos.groupby("Rango de Tiempo")["Costo (MXN)"].sum().reset_index()
 
-# 🔹 Gráfico de barras del total gastado por duración del viaje
-fig, ax = plt.subplots(figsize=(12, 6))
-sns.barplot(data=costos_por_rango, x="Rango de Tiempo", y="Costo (MXN)", palette="coolwarm", ax=ax)
-ax.set_xlabel("Duración del Viaje", fontsize=12)
-ax.set_ylabel("Costo Total (MXN)", fontsize=12)
-ax.set_title("💸 Gasto Total por Duración del Viaje", fontsize=14)
+fig3, ax3 = plt.subplots(figsize=(12, 6))
+sns.barplot(data=costos_por_rango, x="Rango de Tiempo", y="Costo (MXN)", palette="coolwarm", ax=ax3)
+ax3.set_xlabel("Duración del Viaje", fontsize=12)
+ax3.set_ylabel("Costo Total (MXN)", fontsize=12)
+ax3.set_title("💸 Gasto Total por Duración del Viaje", fontsize=14)
 plt.xticks(rotation=45)
 plt.tight_layout()
-st.pyplot(fig)
+st.pyplot(fig3)
 
 # -------------------------------------
-# 📊 Gráfico de Uso de Estaciones 
+# 📊 **Análisis de Uso de Estaciones**
 # -------------------------------------
 
 st.subheader("📊 Uso de Estaciones (Día - Mes - Año - Inicio - Fin)")
 
-# 🔹 Verificar si la columna "Inicio del viaje" existe y convertirla a datetime
+# 🔹 **Verificar si la columna 'Inicio del viaje' existe y convertirla a datetime si es necesario**
 if "Inicio del viaje" not in global_df.columns:
     st.error("⚠️ ERROR: La columna 'Inicio del viaje' no existe. Se procederá a calcularla nuevamente.")
     global_df["Inicio del viaje"] = pd.to_datetime(global_df["Inicio del viaje"], errors="coerce")
 
-# 🔹 Crear columnas adicionales para análisis
+# 🔹 **Crear columnas adicionales para análisis**
 global_df["Día de la Semana"] = global_df["Inicio del viaje"].dt.day_name()
 global_df["Mes"] = global_df["Inicio del viaje"].dt.month
 global_df["Año"] = global_df["Inicio del viaje"].dt.year
 global_df["Hora"] = global_df["Inicio del viaje"].dt.hour
 
-# 🔹 Sidebar para elegir tipo de gráfico
+# 🔹 **Definir opciones de análisis en el Sidebar**
 st.sidebar.markdown("---")
 tipo_grafico = st.sidebar.selectbox(
-    "Selecciona el Tipo de Análisis 📊", 
+    "📊 Selecciona el Tipo de Análisis:", 
     ["Uso por Día de la Semana", "Uso por Mes", "Uso por Año", "Uso por Hora", "Comparación Inicio vs Fin"]
 )
 
-# 🔹 1️⃣ Gráfico de Uso por Día de la Semana
-if tipo_grafico == "Uso por Día de la Semana":
-    st.subheader("📅 Viajes por Día de la Semana")
+# 🔹 **Diccionario de opciones para gráficos**
+graficos = {
+    "Uso por Día de la Semana": {
+        "col": "Día de la Semana",
+        "titulo": "Uso de Mibici por Día de la Semana",
+        "xlabel": "Día de la Semana",
+        "xticks": ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"],
+        "paleta": "pastel",
+        "tipo": "bar"
+    },
+    "Uso por Mes": {
+        "col": "Mes",
+        "titulo": "Uso de Mibici por Mes",
+        "xlabel": "Mes",
+        "xticks": ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"],
+        "paleta": "coolwarm",
+        "tipo": "bar"
+    },
+    "Uso por Año": {
+        "col": "Año",
+        "titulo": "Evolución del Uso de Mibici por Año",
+        "xlabel": "Año",
+        "xticks": None,
+        "paleta": "Blues",
+        "tipo": "line"
+    },
+    "Uso por Hora": {
+        "col": "Hora",
+        "titulo": "Uso de Mibici por Hora del Día",
+        "xlabel": "Hora del Día",
+        "xticks": list(range(0, 24)),
+        "paleta": "Greens",
+        "tipo": "line"
+    }
+}
 
-    viajes_por_dia = global_df["Día de la Semana"].value_counts().reindex(
-        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    ).reset_index()
-    viajes_por_dia.columns = ["Día", "Total de Viajes"]
+# 🔹 **Si el usuario selecciona una de las opciones del diccionario**
+if tipo_grafico in graficos:
+    config = graficos[tipo_grafico]
 
+    st.subheader(f"📅 {config['titulo']}")
+
+    # 🔹 **Conteo de viajes por la columna seleccionada**
+    df_agrupado = global_df[config["col"]].value_counts().sort_index().reset_index()
+    df_agrupado.columns = [config["col"], "Total de Viajes"]
+
+    # 🔹 **Generar el gráfico según el tipo**
     fig, ax = plt.subplots(figsize=(10, 5))
-    sns.barplot(x="Día", y="Total de Viajes", data=viajes_por_dia, palette="muted", ax=ax)
-    ax.set_xlabel("Día de la Semana")
-    ax.set_ylabel("Número de Viajes")
-    ax.set_title("Uso de Mibici por Día de la Semana")
-    plt.xticks(rotation=45)
+    
+    if config["tipo"] == "bar":
+        sns.barplot(x=config["col"], y="Total de Viajes", data=df_agrupado, palette=config["paleta"], ax=ax)
+    elif config["tipo"] == "line":
+        sns.lineplot(x=config["col"], y="Total de Viajes", data=df_agrupado, marker="o", color="b", ax=ax)
+
+    ax.set_xlabel(config["xlabel"], fontsize=12)
+    ax.set_ylabel("Número de Viajes", fontsize=12)
+    ax.set_title(config["titulo"], fontsize=14)
+    
+    if config["xticks"]:
+        plt.xticks(range(len(config["xticks"])), config["xticks"], rotation=45)
+    
+    plt.tight_layout()
     st.pyplot(fig)
 
-# 🔹 2️⃣ Gráfico de Uso por Mes
-elif tipo_grafico == "Uso por Mes":
-    st.subheader("📅 Viajes por Mes")
-
-    viajes_por_mes = global_df["Mes"].value_counts().sort_index().reset_index()
-    viajes_por_mes.columns = ["Mes", "Total de Viajes"]
-
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.barplot(x="Mes", y="Total de Viajes", data=viajes_por_mes, palette="coolwarm", ax=ax)
-    ax.set_xlabel("Mes")
-    ax.set_ylabel("Número de Viajes")
-    ax.set_title("Uso de Mibici por Mes")
-    plt.xticks(range(12), ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"])
-    st.pyplot(fig)
-
-# 🔹 3️⃣ Gráfico de Uso por Año
-elif tipo_grafico == "Uso por Año":
-    st.subheader("📆 Viajes por Año")
-
-    viajes_por_año = global_df["Año"].value_counts().sort_index().reset_index()
-    viajes_por_año.columns = ["Año", "Total de Viajes"]
-
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.lineplot(x="Año", y="Total de Viajes", data=viajes_por_año, marker="o", color="b", ax=ax)
-    ax.set_xlabel("Año")
-    ax.set_ylabel("Número de Viajes")
-    ax.set_title("Evolución del Uso de Mibici por Año")
-    plt.xticks(rotation=45)
-    st.pyplot(fig)
-
-# 🔹 4️⃣ Gráfico de Uso por Hora
-elif tipo_grafico == "Uso por Hora":
-    st.subheader("🕒 Uso por Hora del Día")
-
-    viajes_por_hora = global_df["Hora"].value_counts().sort_index().reset_index()
-    viajes_por_hora.columns = ["Hora", "Total de Viajes"]
-
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.lineplot(x="Hora", y="Total de Viajes", data=viajes_por_hora, marker="o", color="g", ax=ax)
-    ax.set_xlabel("Hora del Día")
-    ax.set_ylabel("Número de Viajes")
-    ax.set_title("Uso de Mibici por Hora del Día")
-    plt.xticks(range(0, 24))
-    st.pyplot(fig)
-
-# 🔹 5️⃣ Comparación de Estaciones de Inicio vs Fin
+# 🔹 **Comparación de Estaciones de Inicio vs Fin**
 elif tipo_grafico == "Comparación Inicio vs Fin":
     st.subheader("🚴 Comparación de Uso: Estaciones de Inicio vs Fin")
 
+    # 🔹 **Obtener conteos de viajes desde y hacia estaciones**
     viajes_inicio = global_df["Origen Id"].value_counts().reset_index()
     viajes_inicio.columns = ["Estación", "Viajes Inicio"]
 
     viajes_fin = global_df["Destino Id"].value_counts().reset_index()
     viajes_fin.columns = ["Estación", "Viajes Fin"]
 
+    # 🔹 **Unir ambos DataFrames**
     uso_estaciones = viajes_inicio.merge(viajes_fin, on="Estación", how="outer").fillna(0)
 
-    # Seleccionar las 10 estaciones más usadas
+    # 🔹 **Seleccionar las 10 estaciones más utilizadas**
     top_estaciones = uso_estaciones.sort_values(by=["Viajes Inicio", "Viajes Fin"], ascending=False).head(10)
 
+    # 🔹 **Gráfico de comparación de viajes de inicio vs fin**
     fig, ax = plt.subplots(figsize=(12, 6))
+    
     sns.barplot(x="Estación", y="Viajes Inicio", data=top_estaciones, color="blue", label="Inicio", ax=ax)
     sns.barplot(x="Estación", y="Viajes Fin", data=top_estaciones, color="red", alpha=0.6, label="Fin", ax=ax)
 
-    ax.set_xlabel("Estación")
-    ax.set_ylabel("Número de Viajes")
-    ax.set_title("Comparación de Uso: Inicio vs Fin de Viajes")
+    ax.set_xlabel("Estación", fontsize=12)
+    ax.set_ylabel("Número de Viajes", fontsize=12)
+    ax.set_title("Comparación de Uso: Inicio vs Fin de Viajes", fontsize=14)
     ax.legend()
+    
     plt.xticks(rotation=45)
+    plt.tight_layout()
     st.pyplot(fig)
 
+# -----------------------------------------
+# 🔹 Análisis de Correlación Edad - Tiempo de Viaje
+# -----------------------------------------
 st.subheader("📊 **Correlación entre Edad y Tiempo de Viaje**")
 
 # 🔹 **Verificar si las columnas necesarias existen**
@@ -548,3 +554,40 @@ if "Año de nacimiento" in global_df.columns and "Duración (min)" in global_df.
 else:
     st.error("⚠️ No se encontraron las columnas necesarias ('Año de nacimiento' y 'Duración (min)').")
 
+# -----------------------------------------
+# 🔹 Análisis de Correlación Día de la Semana - Tiempo de Viaje
+# -----------------------------------------
+st.subheader("📊 **Correlación entre Día de la Semana y Tiempo de Viaje**")
+
+# 🔹 **Verificar si las columnas necesarias existen**
+if "Inicio del viaje" in global_df.columns and "Duración (min)" in global_df.columns:
+    
+    # 🔹 **Convertir a datetime si es necesario**
+    global_df["Inicio del viaje"] = pd.to_datetime(global_df["Inicio del viaje"], errors="coerce")
+
+    # 🔹 **Extraer el día de la semana (0=Lunes, 6=Domingo)**
+    df_dia_tiempo = global_df[["Inicio del viaje", "Duración (min)"]].dropna().copy()
+    df_dia_tiempo["Día de la Semana"] = df_dia_tiempo["Inicio del viaje"].dt.dayofweek
+
+    # 🔹 **Mapeo de números a nombres de días**
+    dias_semana = {0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves", 4: "Viernes", 5: "Sábado", 6: "Domingo"}
+    df_dia_tiempo["Día de la Semana Nombre"] = df_dia_tiempo["Día de la Semana"].map(dias_semana)
+
+    # 🔹 **Cálculo de la correlación**
+    correlacion = df_dia_tiempo["Día de la Semana"].corr(df_dia_tiempo["Duración (min)"])
+
+    st.write(f"🔢 **Coeficiente de Correlación Pearson:** {correlacion:.3f}")
+
+    # 🔹 **Gráfico de Boxplot (Distribución del tiempo de viaje por día)**
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.boxplot(data=df_dia_tiempo, x="Día de la Semana Nombre", y="Duración (min)", palette="coolwarm", ax=ax)
+    
+    ax.set_xlabel("Día de la Semana", fontsize=12)
+    ax.set_ylabel("Duración del Viaje (min)", fontsize=12)
+    ax.set_title("📉 Relación entre Día de la Semana y Tiempo de Viaje", fontsize=14)
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    st.pyplot(fig)
+
+else:
+    st.error("⚠️ No se encontraron las columnas necesarias ('Inicio del viaje' y 'Duración (min)').")
