@@ -11,7 +11,7 @@ from io import BytesIO
 # 🔹 Configuración Inicial de Streamlit
 # -----------------------------------------
 st.set_page_config(page_title="Análisis Mibici", layout="wide")
-st.image("./IMG/Foto_de_estacion_mibici.jpg", use_container_width=True)
+st.image("./IMG/Foto de estacion mibici.jpg", use_container_width=True)
 
 st.title("🚴‍♂️ Análisis de Datos Mibici")
 st.markdown("""
