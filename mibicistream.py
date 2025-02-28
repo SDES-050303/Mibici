@@ -5,8 +5,7 @@ import seaborn as sns
 import numpy as np
 from geopy.distance import geodesic
 
-st.sidebar.image("./IMG/Foto de estacion mi bici.jpg", use_container_width=True)
-
+st.image("./IMG/Foto de estacion mi bici.jpg", use_container_width=True)
 
 st.title("Análisis Mibici")
 st.header("Introducción")
