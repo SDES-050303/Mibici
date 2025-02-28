@@ -170,11 +170,6 @@ def calcular_promedio_viajes(df, group_col, value_name="Total de Viajes"):
     
     return viajes, promedio
 
-st.text("📌 Esta función calcula el número total de viajes agrupados por una categoría específica, "
-        "como el año o la estación de origen. Además, obtiene el promedio de viajes dentro de esa categoría, "
-        "lo que permite evaluar tendencias y comparar la demanda entre distintos periodos o ubicaciones.")
-
-
 # -----------------------------------------
 # 📊 Promedio de Viajes por Estación
 # -----------------------------------------
@@ -248,11 +243,6 @@ def calcular_distancia(row):
     except:
         return np.nan  # Si hay un error, devuelve NaN
     
-
-st.text("📊 Este valor representa el promedio de viajes iniciados desde cada estación. "
-        "Se calcula dividiendo el total de viajes registrados entre el número de estaciones "
-        "únicas en el sistema. Este indicador ayuda a identificar la demanda promedio por estación.")
-
 # -----------------------------------------
 # 🚴 Cálculo de Distancia Recorrida
 # -----------------------------------------
@@ -550,49 +540,6 @@ elif tipo_grafico == "Comparación Inicio vs Fin":
         "Se presentan gráficos que permiten visualizar la evolución del uso de bicicletas a lo largo del tiempo, "
         "ayudando a identificar tendencias de uso estacional. También se compara el número de viajes iniciados y finalizados "
         "en las estaciones más utilizadas para analizar los patrones de movilidad urbana. 🚴‍♂️📈")
-
-# -----------------------------------------
-# 🔹 Análisis de Correlación Edad - Tiempo de Viaje
-# -----------------------------------------
-st.subheader("📊 **Correlación entre Edad y Tiempo de Viaje**")
-
-# 🔹 **Verificar si las columnas necesarias existen**
-if "Año de nacimiento" in global_df.columns and "Duración (min)" in global_df.columns:
-    
-    # 🔹 **Eliminar valores nulos y convertir el año de nacimiento a número**
-    df_edad_tiempo = global_df[["Año de nacimiento", "Duración (min)"]].dropna().copy()
-    df_edad_tiempo["Año de nacimiento"] = df_edad_tiempo["Año de nacimiento"].astype(int, errors='ignore')
-
-    # 🔹 **Obtener el año actual correctamente**
-    año_actual = pd.Timestamp.today().year
-    df_edad_tiempo["Edad"] = año_actual - df_edad_tiempo["Año de nacimiento"]
-
-    # 🔹 **Eliminar edades fuera de un rango razonable (10 a 100 años)**
-    df_edad_tiempo = df_edad_tiempo[(df_edad_tiempo["Edad"] >= 10) & (df_edad_tiempo["Edad"] <= 100)]
-    
-    # 🔹 **Cálculo de la correlación**
-    if not df_edad_tiempo.empty:
-        correlacion = df_edad_tiempo["Edad"].corr(df_edad_tiempo["Duración (min)"])
-        st.write(f"🔢 **Coeficiente de Correlación Pearson:** {correlacion:.3f}")
-        
-        # 🔹 **Gráfico de Dispersión**
-        fig, ax = plt.subplots(figsize=(10, 5))
-        sns.scatterplot(data=df_edad_tiempo, x="Edad", y="Duración (min)", alpha=0.3, color="blue", ax=ax)
-        sns.regplot(data=df_edad_tiempo, x="Edad", y="Duración (min)", scatter=False, color="red", ax=ax)
-        
-        ax.set_xlabel("Edad del Usuario", fontsize=12)
-        ax.set_ylabel("Duración del Viaje (min)", fontsize=12)
-        ax.set_title("📉 Relación entre Edad y Tiempo de Viaje", fontsize=14)
-        plt.tight_layout()
-        st.pyplot(fig)
-
-else:
-    st.error("⚠️ No se encontraron las columnas necesarias ('Año de nacimiento' y 'Duración (min)').")
-
-st.text("📊 Este análisis evalúa la relación entre la edad del usuario y la duración de su viaje en Mibici. "
-        "Se calcula la correlación de Pearson entre ambas variables y se presenta en un gráfico de dispersión "
-        "con una línea de tendencia. Esto permite observar si existe alguna tendencia en la duración del viaje "
-        "según la edad de los ciclistas y si los usuarios más jóvenes o mayores tienden a realizar viajes más largos o cortos. 🚴‍♂️📉")
 
 # -----------------------------------------
 # 🔹 Análisis de Correlación Día de la Semana - Tiempo de Viaje
