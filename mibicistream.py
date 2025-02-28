@@ -264,5 +264,5 @@ ax.set_xlabel("Distancia (km)", fontsize=12)
 ax.set_ylabel("Frecuencia", fontsize=12)
 ax.set_title("Distribución de Distancias Recorridas en los Viajes de Mibici", fontsize=14)
 plt.tight_layout()
-st.pyplot(fig
+st.pyplot(fig)
 
