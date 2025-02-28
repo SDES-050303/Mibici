@@ -337,3 +337,56 @@ plt.xticks(rotation=45)
 plt.tight_layout()
 st.pyplot(fig2)
 
+# -------------------------------------
+# 🔹 Cálculo del Total de Dinero Gastado (Aproximado)
+# -------------------------------------
+
+st.subheader("Total de Dinero Gastado (Aproximado)")
+
+# 🔹 Función para calcular el costo según la duración del viaje
+def calcular_costo(duracion):
+    """
+    Calcula el costo adicional del viaje según su duración en minutos.
+    - 0 a 30 min: incluido (0 MXN)
+    - 30:01 a 60 min: 29.00 MXN
+    - >60 min: 29.00 MXN + 40.00 MXN por cada media hora adicional (o fracción)
+    """
+    if duracion <= 30:
+        return 0.0
+    elif duracion <= 60:
+        return 29.0
+    else:
+        periodos_adicionales = np.ceil((duracion - 60) / 30)  # Cada 30 min adicionales
+        return 29.0 + (periodos_adicionales * 40.0)
+
+# 🔹 Aplicar la función a los datos
+df_costos = global_df.copy()
+df_costos["Costo (MXN)"] = df_costos["Duración (min)"].apply(calcular_costo)
+
+# 🔹 Mostrar los primeros 10 registros
+st.write("Ejemplo de costos calculados (Primeros 10 registros):")
+st.dataframe(df_costos[["Viaje Id", "Duración (min)", "Costo (MXN)"]].head(10))
+
+# 🔹 Calcular el gasto total
+total_gasto = df_costos["Costo (MXN)"].sum()
+st.write(f"**Gasto Total Aproximado:** ${total_gasto:,.2f} MXN")
+
+# 🔹 Agrupar por rangos de tiempo para visualización
+bins = [0, 30, 60, 90, 120, 150, 180, 210, 240, 300, np.inf]
+labels = ["0-30 min", "31-60 min", "61-90 min", "91-120 min", "121-150 min",
+          "151-180 min", "181-210 min", "211-240 min", "241-300 min", "300+ min"]
+df_costos["Rango de Tiempo"] = pd.cut(df_costos["Duración (min)"], bins=bins, labels=labels, right=False)
+
+# 🔹 Calcular total de costos por rango
+costos_por_rango = df_costos.groupby("Rango de Tiempo")["Costo (MXN)"].sum().reset_index()
+
+# 🔹 Gráfico de barras del total gastado por rango de duración
+fig, ax = plt.subplots(figsize=(12, 6))
+sns.barplot(data=costos_por_rango, x="Rango de Tiempo", y="Costo (MXN)", palette="coolwarm", ax=ax)
+ax.set_xlabel("Duración del Viaje", fontsize=12)
+ax.set_ylabel("Costo Total (MXN)", fontsize=12)
+ax.set_title("Gasto Total por Duración del Viaje", fontsize=14)
+plt.xticks(rotation=45)
+plt.tight_layout()
+st.pyplot(fig)
+
