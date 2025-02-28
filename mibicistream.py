@@ -142,14 +142,51 @@ else:
 
 #------------------------------------------------------------------Promedio en viajes---------------------------------------------
 
-# Filtrar valores extremos (evita outliers raros en la gráfica)
-global_df_filtrado = global_df[global_df["Duración (min)"] < 120]  # Solo viajes de menos de 2 horas
+# Calcular el número de viajes por estación (origen y destino)
+viajes_por_estacion = global_df.groupby('Origen Id').size().reset_index(name="Total de Viajes")
 
-# Graficar histograma
-st.subheader("Distribución del tiempo de viaje")
-fig, ax = plt.subplots(figsize=(10, 5))
-sns.histplot(global_df_filtrado["Duración (min)"], bins=30, kde=True, color="blue", ax=ax)
-ax.set_xlabel("Duración del viaje (minutos)", fontsize=12)
-ax.set_ylabel("Cantidad de viajes", fontsize=12)
-ax.set_title("Distribución de la duración de los viajes", fontsize=14)
+# Calcular el promedio de viajes por estación
+promedio_viajes = viajes_por_estacion["Total de Viajes"].mean()
+
+# Mostrar el promedio
+st.write(f"Promedio de viajes por estación: {promedio_viajes:.2f} viajes")
+#-------------------------------------------------------------------------------------------
+# Agrupar por "Año" y contar el número de viajes
+viajes_por_año = global_df.groupby("Año").size().reset_index(name="Total de Viajes")
+
+# Calcular el promedio de viajes por año
+promedio_viajes_por_año = viajes_por_año["Total de Viajes"].mean()
+
+# Mostrar el promedio de viajes por año
+st.write(f"Promedio de viajes por año: {promedio_viajes_por_año:.2f} viajes")
+
+#-------------------------------------------------------------------------------------------------
+# Agrupar por estación (origen) y contar el total de viajes
+viajes_por_estacion = global_df.groupby('Origen Id').size().reset_index(name="Total de Viajes")
+
+# Calcular el promedio de viajes por estación
+promedio_por_estacion = viajes_por_estacion.groupby('Origen Id')['Total de Viajes'].mean().reset_index()
+
+# Ordenar de mayor a menor para ver las estaciones más populares
+promedio_por_estacion = promedio_por_estacion.sort_values(by='Total de Viajes', ascending=False)
+
+# Seleccionar el Top 10
+top_10_promedio = promedio_por_estacion.head(10)
+
+# Mostrar los resultados
+st.subheader("Top 10 Estaciones con Más Viajes")
+st.dataframe(top_10_promedio)
+
+#-------------------------------------------------------------------------------------------------------
+# Gráfica de los 10 primeros promedios de viajes por estación
+fig, ax = plt.subplots(figsize=(12, 6))
+sns.barplot(x=top_10_promedio['Origen Id'], y=top_10_promedio['Total de Viajes'], palette="viridis", ax=ax)
+ax.set_xlabel('Estación', fontsize=12)
+ax.set_ylabel('Total de Viajes', fontsize=12)
+ax.set_title('Top 10 Estaciones con Más Viajes', fontsize=14)
+plt.xticks(rotation=45)
+plt.tight_layout()
 st.pyplot(fig)
+
+
+
