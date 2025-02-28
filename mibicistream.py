@@ -23,6 +23,8 @@ st.sidebar.image("./IMG/Mibici_logo.jpg", use_container_width=True)
 # ------------------- Cargar archivos limpios por año -------------------
 # Todas las lecturas se hacen con encoding='latin-1'
 datos2014 = pd.read_csv("./datos/2014/Mibici_2014_limpios.csv", encoding='latin-1')
+datos2015 = pd.read_csv("./datos/2015/Mibici_2015_limpios.csv_2.csv", encoding='latin-1')
+
 
 
 nomenclatura = pd.read_csv("./datos/Nomenclatura de las estaciones/nomenclatura_2025_01.csv", encoding='latin-1')
