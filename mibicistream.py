@@ -41,7 +41,7 @@ uploaded_file = st.sidebar.file_uploader("📁 Sube el ZIP con los datos", type=
 @st.cache_data
 def cargar_nomenclatura():
     try:
-        return pd.read_csv("./datos/Nomenclatura de estaciones/nomenclatura_2025_01.csv", encoding='latin-1')
+        return pd.read_csv("./datos/Nomenclatura de las estaciones/nomenclatura_2025_01.csv", encoding='latin-1')
     except Exception as e:
         st.sidebar.error(f"⚠️ Error al cargar la nomenclatura: {e}")
         return None
