@@ -15,6 +15,7 @@ from textblob import TextBlob
 nltk.data.path.append('./nltk_data')
 nltk.download('stopwords', quiet=True)
 
+
 # --- Configuración Inicial ---
 st.set_page_config(page_title="Análisis de Letras de Canciones", layout="wide")
 DATA_DIR = "Data songs"  # Carpeta principal donde están las subcarpetas "80's", "Rock", etc.
@@ -44,28 +45,31 @@ modo = st.sidebar.radio("Modo de análisis", ["Por canción", "Todas las cancion
 archivos = cargar_archivos(carpeta_seleccionada)
 st.sidebar.write("Canciones disponibles:", list(archivos.keys()))  # Verifica que las canciones se cargan
 
-# --- Descripción e instrucciones ---
-st.title("🎶 Análisis de Letras de Canciones")
-st.markdown("""
-Este proyecto permite analizar letras de canciones organizadas por carpeta (por ejemplo, géneros o décadas musicales).  
-Puedes elegir entre analizar canciones individualmente o todas juntas para obtener una visión general del contenido.
+# Mostrar bienvenida solo si aún no hay canciones seleccionadas
+if 'canciones_seleccionadas' not in locals():
+    st.title("🎶 Análisis de Letras de Canciones")
+    st.markdown("""
+    Este proyecto permite analizar letras de canciones organizadas por carpeta (por ejemplo, géneros o décadas musicales).  
+    Puedes elegir entre analizar canciones individualmente o todas juntas para obtener una visión general del contenido.
 
-**¿Qué puedes hacer aquí?**
-- Ver cuántas palabras tiene cada canción
-- Identificar palabras comunes y únicas
-- Ver un WordCloud con las palabras más frecuentes
-- Analizar combinaciones de palabras (N-gramas)
-- Buscar patrones con expresiones regulares
-- Evaluar el sentimiento (positivo/negativo) en canciones en inglés
-""")
+    **¿Qué puedes hacer aquí?**
+    - Ver cuántas palabras tiene cada canción
+    - Identificar palabras comunes y únicas
+    - Ver un WordCloud con las palabras más frecuentes
+    - Analizar combinaciones de palabras (N-gramas)
+    - Buscar patrones con expresiones regulares
+    - Evaluar el sentimiento (positivo/negativo) en canciones en inglés
+    """)
 
-st.info("""
-📌 **Instrucciones**:
-1. Usa el panel lateral para seleccionar el idioma y la carpeta de canciones.
-2. Escoge el modo de análisis: por canción o todas las canciones de la carpeta.
-3. Selecciona una o más canciones si estás en modo individual.
-4. Explora los resultados visuales e interpretativos.
-""")
+    st.info("""
+    📌 **Instrucciones**:
+    1. Usa el panel lateral para seleccionar el idioma y la carpeta de canciones.
+    2. Escoge el modo de análisis: por canción o todas las canciones de la carpeta.
+    3. Selecciona una o más canciones si estás en modo individual.
+    4. Explora los resultados visuales e interpretativos.
+    """)
+
+
 # --- Funciones de Análisis ---
 def limpiar_texto(texto):
     texto = texto.lower()
@@ -201,4 +205,3 @@ if canciones_seleccionadas:
         st.header(f"🧾 Análisis Combinado de '{carpeta_seleccionada}'")
         texto_completo = " ".join(tokens_todas)  # O puedes concatenar texto real si lo prefieres
         mostrar_analisis("Todas las canciones", texto_completo, tokens_todas, modo="Todas las canciones")
-
