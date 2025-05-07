@@ -1,5 +1,6 @@
 streamlit
-nltk
-wordcloud
+pandas
 matplotlib
-textblob
+seaborn
+numpy
+geopy
